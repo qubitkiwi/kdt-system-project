@@ -1,3 +1,4 @@
 *.o
 filebrowser.db
 .vscode
+toy_system
