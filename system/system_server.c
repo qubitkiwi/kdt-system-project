@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <time.h>
 #include <string.h>
+#include <pthread.h>
 
 
 pid_t create_system_server() {
@@ -25,7 +26,7 @@ static int timer = 0;
 
 static void timer_signal_handler(int sig, siginfo_t *si, void *uc) {
     timer++;
-    printf("system timer %d\n", timer);
+    // printf("system timer %d\n", timer);
 }
 
 void init_sig_timer() {
@@ -64,12 +65,76 @@ void init_sig_timer() {
     }    
 }
 
-void system_server() {
-    printf("system_server Process\n");    
-    
-    init_sig_timer();
+void *camera_service_thread(void* arg) {
+    char *s = arg;
+    printf("%s start\n", s);
 
     while (1) {
         sleep(1);
     }
+}
+
+void *watchdog_thread(void* arg) {
+    char *s = arg;
+    printf("%s start\n", s);
+
+    while (1) {
+        sleep(1);
+    }
+}
+
+void *disk_service_thread(void* arg) {
+    char *s = arg;
+    printf("%s start\n", s);
+
+    while (1) {
+        sleep(1);
+    }
+}
+
+void *monitor_thread(void* arg) {
+    char *s = arg;
+    printf("%s start\n", s);
+
+    while (1) {
+        sleep(1);
+    }
+}
+
+
+void system_server() {
+    printf("system_server Process\n");    
+
+    init_sig_timer();
+
+    // thread start
+    pthread_t watchdog_thread_t, camera_service_thread_t, monitor_thread_t, disk_service_thread_t;
+
+    if (pthread_create(&watchdog_thread_t, NULL, watchdog_thread, "watchdog thread") != 0) {
+        perror("watchdog_thread");
+        exit(-1);
+    }
+    if (pthread_create(&camera_service_thread_t, NULL, camera_service_thread, "camera service thread") != 0) {
+        perror("camera_service_thread");
+        exit(-1);
+    }
+    if (pthread_create(&monitor_thread_t, NULL, monitor_thread, "monitor thread") != 0) {
+        perror("monitor_thread");
+        exit(-1);
+    }
+    if (pthread_create(&disk_service_thread_t, NULL, disk_service_thread, "disk service thread") != 0) {
+        perror("disk_service_thread");
+        exit(-1);
+    }
+
+    while (1) {
+        sleep(1);
+    }
+
+    // thread end
+    pthread_join(camera_service_thread_t, (void **)0);
+    pthread_join(camera_service_thread_t, (void **)0);
+    pthread_join(monitor_thread_t, (void **)0);
+    pthread_join(disk_service_thread_t, (void **)0);
+
 }

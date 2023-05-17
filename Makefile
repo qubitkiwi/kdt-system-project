@@ -4,10 +4,10 @@ SYSTEM = ./system
 UI = ./ui
 WEB_SERVER = ./web_server
 
-objects = main.o system_server.o web_server.o input.o gui.o
+objects = main.o system_server.o web_server.o input.o gui.o toy.o
 
 $(TARGET): $(objects)
-	$(CC) -o $(TARGET) $(objects) -lrt
+	$(CC) -o $(TARGET) $(objects) -lrt -lpthread
 
 main.o:  main.c
 	$(CC) -c main.c
@@ -19,7 +19,10 @@ gui.o: $(UI)/gui.h $(UI)/gui.c
 	$(CC) -c $(UI)/gui.c
 
 input.o: $(UI)/input.h $(UI)/input.c
-	$(CC) -c $(UI)/input.c
+	$(CC) -c $(UI)/input.c toy.o
+
+toy.o: $(UI)/input/toy.h $(UI)/input/toy.c
+	$(CC) -c $(UI)/input/toy.c
 
 web_server.o: $(WEB_SERVER)/web_server.h $(WEB_SERVER)/web_server.c
 	$(CC) -c $(WEB_SERVER)/web_server.c

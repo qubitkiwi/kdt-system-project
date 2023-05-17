@@ -4,6 +4,10 @@
 #include <ucontext.h>
 #include <execinfo.h>
 
+#include <pthread.h>
+
+#include "./input/toy.h"
+
 typedef struct _sig_ucontext {
     unsigned long uc_flags;
     struct ucontext *uc_link;
@@ -64,6 +68,21 @@ pid_t create_input() {
     return input_pid;
 }
 
+void *command_thread(void* arg) {
+    char *s = arg;
+    printf("%s start\n", s);
+
+    toy_loop();
+}
+void *sensor_thread(void* arg) {
+    char *s = arg;
+    printf("%s start\n", s);
+
+    while (1) {
+        sleep(1);
+    }
+}
+
 void input() {
     printf("input Process\n");
 
@@ -78,7 +97,22 @@ void input() {
         exit(-1);
     }
 
+    // thread start
+    pthread_t command_thread_t, sensor_thread_t;
+    if (pthread_create(&command_thread_t, NULL, command_thread, "command thread") != 0) {
+        perror("command_thread");
+        exit(-1);
+    }
+    if (pthread_create(&sensor_thread_t, NULL, sensor_thread, "sensor thread") != 0) {
+        perror("sensor_thread");
+        exit(-1);
+    }
+
     while (1) {
         sleep(1);
     }
+
+    pthread_join(command_thread_t, (void **)0);
+    pthread_join(sensor_thread_t, (void **)0);
+
 }
