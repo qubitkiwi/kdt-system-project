@@ -1,4 +1,7 @@
 #include "web_server.h"
+#include <sys/time.h>
+
+static int toy_timer = 0;
 
 pid_t create_web_server() {
 
@@ -19,7 +22,5 @@ pid_t create_web_server() {
 void web_server() {
     printf("web server Process\n");
 
-    while (1) {
-        sleep(1);
-    }
+    execl("/usr/local/bin/filebrowser", "filebrowser", "-a", "0.0.0.0", "-p", "8080", (char *) NULL);
 }

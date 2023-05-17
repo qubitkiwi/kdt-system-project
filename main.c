@@ -37,7 +37,7 @@ int main() {
     pid_t system_pid, gui_pid, input_pid, web_pid;
     int status, savedErrno;
 
-    /* 여기서 SIGCHLD 시그널  등록 */
+    /* SIGCHLD 시그널  등록 */
     struct sigaction sa;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;

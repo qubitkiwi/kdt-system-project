@@ -7,7 +7,7 @@ WEB_SERVER = ./web_server
 objects = main.o system_server.o web_server.o input.o gui.o
 
 $(TARGET): $(objects)
-	$(CC) -o $(TARGET) $(objects)
+	$(CC) -o $(TARGET) $(objects) -lrt
 
 main.o:  main.c
 	$(CC) -c main.c
