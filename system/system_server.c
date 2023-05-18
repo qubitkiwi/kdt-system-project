@@ -3,7 +3,13 @@
 #include <time.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdbool.h>
 
+#include "../hal/camera_HAL.h"
+
+pthread_mutex_t system_loop_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  system_loop_cond  = PTHREAD_COND_INITIALIZER;
+bool            system_loop_exit = false;    ///< true if main loop should exit
 
 pid_t create_system_server() {
 
@@ -24,8 +30,26 @@ pid_t create_system_server() {
 
 static int timer = 0;
 
+void signal_exit(void) {
+    /* 여기에 구현하세요..  종료 메시지를 보내도록.. */
+    if (pthread_mutex_lock(&system_loop_mutex) != 0) {
+        perror("system_loop_mutex");
+        exit(-1);
+    }
+
+    system_loop_exit = true;
+
+    if (pthread_mutex_unlock(&system_loop_mutex) != 0) {
+        perror("system_loop_mutex");
+        exit(-1);
+    }
+    pthread_cond_signal(&system_loop_cond);
+}
+
+
 static void timer_signal_handler(int sig, siginfo_t *si, void *uc) {
     timer++;
+    signal_exit();
     // printf("system timer %d\n", timer);
 }
 
@@ -53,9 +77,9 @@ void init_sig_timer() {
 
     // itimer
     struct itimerspec ts;
-    ts.it_value.tv_sec = 5;
+    ts.it_value.tv_sec = 10;
     ts.it_value.tv_nsec = 0;
-    ts.it_interval.tv_sec = 5;
+    ts.it_interval.tv_sec = 10;
     ts.it_interval.tv_nsec = 0;
 
     printf("start system server Timer\n");
@@ -69,8 +93,11 @@ void *camera_service_thread(void* arg) {
     char *s = arg;
     printf("%s start\n", s);
 
+    toy_camera_open();
+    toy_camera_take_picture();
+
     while (1) {
-        sleep(1);
+        posix_sleep_ms(5000);
     }
 }
 
@@ -127,6 +154,19 @@ void system_server() {
         exit(-1);
     }
 
+    if (pthread_mutex_lock(&system_loop_mutex) != 0) {
+        perror("system_loop_mutex");
+        exit(-1);
+    }
+    while (system_loop_exit == false){
+        pthread_cond_wait(&system_loop_cond, &system_loop_mutex);
+        system_loop_exit = true;    
+    }
+    if (pthread_mutex_unlock(&system_loop_mutex) != 0) {
+        perror("system_loop_mutex");
+        exit(-1);
+    }
+    printf("<== system\n");
     while (1) {
         sleep(1);
     }

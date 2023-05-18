@@ -3,11 +3,15 @@ TARGET = toy_system
 SYSTEM = ./system
 UI = ./ui
 WEB_SERVER = ./web_server
+HAL = ./hal
 
 objects = main.o system_server.o web_server.o input.o gui.o toy.o common.o
+cxx_objects = camera_HAL.o ControlThread.o
 
-$(TARGET): $(objects)
-	$(CC) -o $(TARGET) $(objects) -lrt -lpthread
+CXX = g++
+
+$(TARGET): $(objects) $(cxx_objects)
+	$(CXX) -o $(TARGET) $(cxx_objects) $(objects) -lrt -lpthread
 
 main.o:  main.c
 	$(CC) -c main.c
@@ -29,6 +33,13 @@ web_server.o: $(WEB_SERVER)/web_server.h $(WEB_SERVER)/web_server.c
 
 common.o: ./common.h common.c
 	$(CC) -c common.c
+
+camera_HAL.o: $(HAL)/camera_HAL.cpp
+	$(CXX) -c  $(HAL)/camera_HAL.cpp
+
+ControlThread.o: $(HAL)/ControlThread.cpp
+	$(CXX) -c  $(HAL)/ControlThread.cpp
+
 
 clean:
 	rm -rf *.o
