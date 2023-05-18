@@ -1,17 +1,21 @@
 #include "toy.h"
 
 #include <string.h>
-#include <unistd.h>
 #include <wait.h>
+
+pthread_mutex_t global_message_mutex  = PTHREAD_MUTEX_INITIALIZER;
+char global_message[TOY_BUFFSIZE];
 
 char *builtin_str[] = {
     "send",
+    "mu",
     "sh",
     "exit"
 };
 
 int (*builtin_func[]) (char **) = {
     &toy_send,
+    &toy_mutex,
     &toy_shell,
     &toy_exit
 };
@@ -43,8 +47,7 @@ int toy_shell(char **args)
         exit(EXIT_FAILURE);
     } else if (pid < 0) {
         perror("toy");
-    } else
-{
+    } else {
         do
         {
             waitpid(pid, &status, WUNTRACED);
@@ -127,7 +130,15 @@ void toy_loop(void)
     int status;
 
     do {
+        if (pthread_mutex_lock(&global_message_mutex) != 0) {
+            perror("pthread_mutex_lock");
+            exit(-1);
+        }
         printf("TOY>");
+        if (pthread_mutex_unlock(&global_message_mutex) != 0) {
+            perror("pthread_mutex_lock");
+            exit(-1);
+        }
         line = toy_read_line();
         args = toy_split_line(line);
         status = toy_execute(args);
@@ -135,4 +146,26 @@ void toy_loop(void)
         free(line);
         free(args);
     } while (status);
+}
+
+int toy_mutex(char **args) {
+    if (args[1] == NULL) {
+        return 1;
+    }
+
+    printf("save message: %s\n", args[1]);
+    // 여기서 뮤텍스
+    if (pthread_mutex_lock(&global_message_mutex) != 0) {
+        perror("pthread_mutex_lock");
+        exit(-1);
+    }
+
+    strcpy(global_message, args[1]);
+
+    if (pthread_mutex_unlock(&global_message_mutex) != 0) {
+        perror("pthread_mutex_lock");
+        exit(-1);
+    }
+
+    return 1;
 }

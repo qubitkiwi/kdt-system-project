@@ -7,4 +7,6 @@
 
 #include <sys/prctl.h>
 
+int posix_sleep_ms(unsigned int timeout_ms);
+
 #endif

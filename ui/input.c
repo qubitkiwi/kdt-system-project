@@ -4,9 +4,8 @@
 #include <ucontext.h>
 #include <execinfo.h>
 
-#include <pthread.h>
-
-#include "./input/toy.h"
+extern pthread_mutex_t global_message_mutex;
+extern char global_message[];
 
 typedef struct _sig_ucontext {
     unsigned long uc_flags;
@@ -74,12 +73,34 @@ void *command_thread(void* arg) {
 
     toy_loop();
 }
+
 void *sensor_thread(void* arg) {
     char *s = arg;
     printf("%s start\n", s);
 
+    char saved_message[TOY_BUFFSIZE];
+    int i;
     while (1) {
-        sleep(1);
+        i = 0;
+
+        if (pthread_mutex_lock(&global_message_mutex) != 0) {
+            perror("pthread_mutex_lock");
+            exit(-1);
+        }
+    
+        while (global_message[i] != '\0') {
+            printf("%c", global_message[i]);
+            fflush(stdout);
+            posix_sleep_ms(500);
+            i++;
+        }
+
+        if (pthread_mutex_unlock(&global_message_mutex) != 0) {
+            perror("pthread_mutex_lock");
+            exit(-1);
+        }
+
+        posix_sleep_ms(500);
     }
 }
 
