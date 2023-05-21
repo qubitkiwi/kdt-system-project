@@ -112,10 +112,24 @@ void *watchdog_thread(void* arg) {
 
 void *disk_service_thread(void* arg) {
     char *s = arg;
+    FILE* apipe;
+    char buf[1024];
+    char cmd[]="df -h ./";
+
     printf("%s start\n", s);
 
     while (1) {
-        sleep(1);
+        apipe = popen(cmd, "r");
+        if (apipe == NULL) {
+            perror("popen");
+            continue;
+        }
+        while (fgets(buf, 1024, apipe) != NULL) {
+            printf("%s", buf);
+        }
+        pclose(apipe);
+
+        posix_sleep_ms(10000);
     }
 }
 
