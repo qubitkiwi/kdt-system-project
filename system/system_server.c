@@ -4,12 +4,43 @@
 #include <string.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <mqueue.h>
 
 #include "../hal/camera_HAL.h"
+#include "../ui/input/toy.h"
+
+#define CAMERA_TAKE_PICTURE 1
 
 pthread_mutex_t system_loop_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  system_loop_cond  = PTHREAD_COND_INITIALIZER;
 bool            system_loop_exit = false;    ///< true if main loop should exit
+
+static mqd_t system_queue[SERVER_THREAD_NUM];
+
+const char *mq_dir[] = {
+    WATCHDOG_QUEUE,
+    MONITOR_QUEUE,
+    DISK_QUEUE,
+    CAMERA_QUEUE
+};
+
+const char *thread_name[] = {
+    "watchdog",
+    "monitor",
+    "disk",
+    "camera"
+};
+
+void* (*thread_function[SERVER_THREAD_NUM])(void*) = {
+    (void* (*)(void*))watchdog_thread,
+    (void* (*)(void*))monitor_thread,
+    (void* (*)(void*))disk_service_thread,
+    (void* (*)(void*))camera_service_thread
+};
+
+static int timer = 0;
+
+
 
 pid_t create_system_server() {
 
@@ -28,7 +59,7 @@ pid_t create_system_server() {
     return system_pid;
 }
 
-static int timer = 0;
+
 
 void signal_exit(void) {
     /* 여기에 구현하세요..  종료 메시지를 보내도록.. */
@@ -90,35 +121,60 @@ void init_sig_timer() {
 }
 
 void *camera_service_thread(void* arg) {
-    char *s = arg;
-    printf("%s start\n", s);
+    // intptr_t thread_id = (intptr_t)arg;
+    int thread_id = (int)arg;
+    toy_msg_t msg;
+    printf("camera_service_thread start, id %d\n", thread_id);
 
     toy_camera_open();
     toy_camera_take_picture();
 
     while (1) {
-        posix_sleep_ms(5000);
+        int num_read = mq_receive(system_queue[thread_id], (void*)&msg, sizeof(toy_msg_t), NULL);
+        if (num_read < 0) continue;
+        printf("camera_service_thread: 메시지가 도착했습니다.\n");
+        printf("msg.type: %d\n", msg.msg_type);
+        printf("msg.param1: %d\n", msg.param1);
+        printf("msg.param2: %d\n", msg.param2);
+
+        if (msg.msg_type == CAMERA_TAKE_PICTURE) {
+            toy_camera_take_picture();
+        }
     }
 }
 
-void *watchdog_thread(void* arg) {
-    char *s = arg;
-    printf("%s start\n", s);
+void *watchdog_thread(void* arg[]) {
+    int thread_id = (int)arg;
+    toy_msg_t msg;
+    printf("watchdog_thread start id %d\n", thread_id);
 
     while (1) {
-        sleep(1);
+        int num_read = mq_receive(system_queue[thread_id], (void*)&msg, sizeof(toy_msg_t), NULL);
+        if (num_read < 0) continue;
+        printf("watchdog_thread: 메시지가 도착했습니다.\n");
+        printf("msg.type: %d\n", msg.msg_type);
+        printf("msg.param1: %d\n", msg.param1);
+        printf("msg.param2: %d\n", msg.param2);
     }
 }
 
 void *disk_service_thread(void* arg) {
-    char *s = arg;
+    int thread_id = (int)arg;
+    toy_msg_t msg;
+    printf("disk_service_thread start id %d\n", thread_id);
+
     FILE* apipe;
     char buf[1024];
     char cmd[]="df -h ./";
-
-    printf("%s start\n", s);
-
+    
     while (1) {
+        int num_read = mq_receive(system_queue[thread_id], (void*)&msg, sizeof(toy_msg_t), NULL);
+        if (num_read < 0) continue;
+        printf("watchdog_thread: 메시지가 도착했습니다.\n");
+        printf("msg.type: %d\n", msg.msg_type);
+        printf("msg.param1: %d\n", msg.param1);
+        printf("msg.param2: %d\n", msg.param2);
+    
         apipe = popen(cmd, "r");
         if (apipe == NULL) {
             perror("popen");
@@ -128,17 +184,21 @@ void *disk_service_thread(void* arg) {
             printf("%s", buf);
         }
         pclose(apipe);
-
-        posix_sleep_ms(10000);
     }
 }
 
 void *monitor_thread(void* arg) {
-    char *s = arg;
-    printf("%s start\n", s);
+    int thread_id = (int)arg;
+    toy_msg_t msg;
+    printf("monitor_thread start %d\n", thread_id);
 
     while (1) {
-        sleep(1);
+        int num_read = mq_receive(system_queue[thread_id], (void*)&msg, sizeof(toy_msg_t), NULL);
+        if (num_read < 0) continue;
+        printf("monitor_thread: 메시지가 도착했습니다.\n");
+        printf("msg.type: %d\n", msg.msg_type);
+        printf("msg.param1: %d\n", msg.param1);
+        printf("msg.param2: %d\n", msg.param2);
     }
 }
 
@@ -148,24 +208,23 @@ void system_server() {
 
     init_sig_timer();
 
+    for (int i=0; i<SERVER_THREAD_NUM; i++) {
+        system_queue[i] = mq_open(mq_dir[i], O_RDWR);
+        if (system_queue[i] == -1) {
+            fprintf(stderr, "mq open err : %s\n", mq_dir[i]);
+            exit(-1);
+        }
+    }
+
     // thread start
     pthread_t watchdog_thread_t, camera_service_thread_t, monitor_thread_t, disk_service_thread_t;
 
-    if (pthread_create(&watchdog_thread_t, NULL, watchdog_thread, "watchdog thread") != 0) {
-        perror("watchdog_thread");
-        exit(-1);
-    }
-    if (pthread_create(&camera_service_thread_t, NULL, camera_service_thread, "camera service thread") != 0) {
-        perror("camera_service_thread");
-        exit(-1);
-    }
-    if (pthread_create(&monitor_thread_t, NULL, monitor_thread, "monitor thread") != 0) {
-        perror("monitor_thread");
-        exit(-1);
-    }
-    if (pthread_create(&disk_service_thread_t, NULL, disk_service_thread, "disk service thread") != 0) {
-        perror("disk_service_thread");
-        exit(-1);
+    pthread_t thread_id[SERVER_THREAD_NUM];
+    for (int i=0; i<SERVER_THREAD_NUM; i++) {
+        if (pthread_create(thread_id, NULL, thread_function[i], i) != 0) {
+            fprintf(stderr,"%s thread err\n", thread_name);
+            exit(-1);
+        }        
     }
 
     if (pthread_mutex_lock(&system_loop_mutex) != 0) {
@@ -186,9 +245,9 @@ void system_server() {
     }
 
     // thread end
-    pthread_join(camera_service_thread_t, (void **)0);
-    pthread_join(camera_service_thread_t, (void **)0);
-    pthread_join(monitor_thread_t, (void **)0);
-    pthread_join(disk_service_thread_t, (void **)0);
+    for (int i=0; i<SERVER_THREAD_NUM; i++) {
+        pthread_join(thread_id[i], (void **)0);
+        printf("end %d\n", i);
+    }
 
 }

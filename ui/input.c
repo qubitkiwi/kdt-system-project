@@ -1,19 +1,10 @@
 #include "input.h"
-#include <signal.h>
+// #include <signal.h>
 #include <string.h>
-#include <ucontext.h>
-#include <execinfo.h>
+
 
 extern pthread_mutex_t global_message_mutex;
 extern char global_message[];
-
-typedef struct _sig_ucontext {
-    unsigned long uc_flags;
-    struct ucontext *uc_link;
-    stack_t uc_stack;
-    struct sigcontext uc_mcontext;
-    sigset_t uc_sigmask;
-} sig_ucontext_t;
 
 void segfault_handler(int sig_num, siginfo_t * info, void * ucontext) {
     void * array[50];

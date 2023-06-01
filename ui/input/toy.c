@@ -2,14 +2,18 @@
 
 #include <string.h>
 #include <wait.h>
+// #include <mqueue.h>
+#include "../../system/system_server.h"
 
 pthread_mutex_t global_message_mutex  = PTHREAD_MUTEX_INITIALIZER;
 char global_message[TOY_BUFFSIZE];
+mqd_t system_queue[SERVER_THREAD_NUM];
 
 char *builtin_str[] = {
     "send",
     "mu",
     "sh",
+    "mq",
     "exit"
 };
 
@@ -17,6 +21,7 @@ int (*builtin_func[]) (char **) = {
     &toy_send,
     &toy_mutex,
     &toy_shell,
+    &toy_message_queue,
     &toy_exit
 };
 
@@ -128,6 +133,18 @@ void toy_loop(void)
     char *line;
     char **args;
     int status;
+    
+    
+    // mq_init(system_queue, O_RDWR);
+    for (int i=0; i<SERVER_THREAD_NUM; i++) {
+        system_queue[i] = mq_open(mq_dir[i], O_RDWR);
+        if (system_queue[i] == -1) {
+            fprintf(stderr, "mq open err : %s\n", mq_dir[i]);
+            exit(-1);
+        }
+    }
+
+    
 
     do {
         if (pthread_mutex_lock(&global_message_mutex) != 0) {
@@ -167,5 +184,26 @@ int toy_mutex(char **args) {
         exit(-1);
     }
 
+    return 1;
+}
+
+int toy_message_queue(char **args)
+{
+    int mqretcode;
+    toy_msg_t msg;
+
+    if (args[1] == NULL || args[2] == NULL) {
+        return 1;
+    }
+
+    if (!strcmp(args[1], "camera")) {
+        msg.msg_type = atoi(args[2]);
+        msg.param1 = 0;
+        msg.param2 = 0;
+        mqretcode = mq_send(system_queue[3], (char *)&msg, sizeof(msg), 0);
+        if (mqretcode == -1) {
+            perror("mqretcode err");
+        }
+    }
     return 1;
 }

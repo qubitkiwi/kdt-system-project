@@ -8,7 +8,12 @@
 #define TOY_TOK_DELIM " \t\r\n\a"
 #define TOY_BUFFSIZE 1024
 
-
+typedef struct {
+    unsigned int msg_type;
+    unsigned int param1;
+    unsigned int param2;
+    void *param3;
+} toy_msg_t;
 
 int toy_send(char **args);
 int toy_shell(char **args);
@@ -25,5 +30,7 @@ char **toy_split_line(char *line);
 void toy_loop(void);
 
 int toy_mutex(char **args);
+int toy_message_queue(char **args);
+
 
 #endif
