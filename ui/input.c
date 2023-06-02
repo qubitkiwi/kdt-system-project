@@ -1,10 +1,11 @@
 #include "input.h"
-// #include <signal.h>
 #include <string.h>
+#include "../sensor.h"
+#include "../system/system_server.h"
+#include <sys/shm.h>
 
+static mqd_t system_queue[SERVER_QUEUE_NUM];
 
-extern pthread_mutex_t global_message_mutex;
-extern char global_message[];
 
 void segfault_handler(int sig_num, siginfo_t * info, void * ucontext) {
     void * array[50];
@@ -68,30 +69,35 @@ void *command_thread(void* arg) {
 void *sensor_thread(void* arg) {
     char *s = arg;
     printf("%s start\n", s);
+    toy_msg_t msg;
+    int shm_id;
+    sensor_data_t *sensor_data = NULL;
 
-    char saved_message[TOY_BUFFSIZE];
-    int i;
+    shm_id = shmget((key_t)SHM_SENSOR_KEY, sizeof(sensor_data_t), 0666 | IPC_CREAT);
+    if (shm_id == -1) {
+        perror("shmget err");
+        exit(-1);
+    }
+    sensor_data = shmat(shm_id, (void *)0, 0);
+    if (sensor_data == (void *)-1) {
+        perror("shmat err");
+        exit(-1);
+    }
+
     while (1) {
-        i = 0;
-
-        if (pthread_mutex_lock(&global_message_mutex) != 0) {
-            perror("pthread_mutex_lock");
-            exit(-1);
+        posix_sleep_ms(5000);
+        if (sensor_data != NULL) {
+            sensor_data->humidity = rand()%100;
+            sensor_data->pressure = rand();
+            sensor_data->temperature = rand()%40 - 10;
         }
-    
-        while (global_message[i] != '\0') {
-            printf("%c", global_message[i]);
-            fflush(stdout);
-            posix_sleep_ms(500);
-            i++;
+        msg.msg_type = 1;
+        msg.param1 = shm_id;
+        msg.param2 = 0;
+        //MONITOR_QUEUE = system_queue[1]
+        if (mq_send(system_queue[1], (char *)&msg, sizeof(msg), 0) == -1) {
+            perror("mqretcode err");
         }
-
-        if (pthread_mutex_unlock(&global_message_mutex) != 0) {
-            perror("pthread_mutex_lock");
-            exit(-1);
-        }
-
-        posix_sleep_ms(500);
     }
 }
 
@@ -107,6 +113,14 @@ void input() {
     if (sigaction(SIGSEGV, &sa, NULL) == -1) {
         perror("sigaction");
         exit(-1);
+    }
+
+    for (int i=0; i<SERVER_QUEUE_NUM; i++) {
+        system_queue[i] = mq_open(mq_dir[i], O_RDWR);
+        if (system_queue[i] == -1) {
+            fprintf(stderr, "mq open err : %s\n", mq_dir[i]);
+            exit(-1);
+        }
     }
 
     // thread start

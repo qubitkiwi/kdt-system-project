@@ -7,7 +7,7 @@
 
 pthread_mutex_t global_message_mutex  = PTHREAD_MUTEX_INITIALIZER;
 char global_message[TOY_BUFFSIZE];
-mqd_t system_queue[SERVER_QUEUE_NUM];
+static mqd_t system_queue[SERVER_QUEUE_NUM];
 
 char *builtin_str[] = {
     "send",

@@ -10,8 +10,11 @@
 
 #include "../hal/camera_HAL.h"
 #include "../ui/input/toy.h"
+#include "../sensor.h"
+#include <sys/shm.h>
 
 #define CAMERA_TAKE_PICTURE 1
+#define SENSOR_DATA 1
 
 pthread_mutex_t system_loop_mutex   = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t timer_mutex         = PTHREAD_MUTEX_INITIALIZER;
@@ -71,7 +74,7 @@ static void timer_expire_signal_handler() {
 static void system_timeout_handler() {
     pthread_mutex_lock(&timer_mutex);
     timer++;
-    printf("timer: %d\n", timer);
+    // printf("timer: %d\n", timer);
     pthread_mutex_unlock(&timer_mutex);
 }
 
@@ -175,6 +178,8 @@ void *disk_service_thread(void* arg) {
 void *monitor_thread(void* arg) {
     int thread_id = (int)arg;
     toy_msg_t msg;
+    int shm_id, rev_shm_id;
+    sensor_data_t *sensor_data = NULL;
     printf("monitor_thread start %d\n", thread_id);
 
     while (1) {
@@ -184,14 +189,28 @@ void *monitor_thread(void* arg) {
         printf("msg.type: %d\n", msg.msg_type);
         printf("msg.param1: %d\n", msg.param1);
         printf("msg.param2: %d\n", msg.param2);
+        
+        if (msg.msg_type == SENSOR_DATA) {
+            rev_shm_id = msg.param1;
+            sensor_data = shmat(rev_shm_id, NULL, 0);
+            if (sensor_data == (void *)-1) {
+                perror("shmat err");
+                exit(-1);
+            }
+            printf("sensor temp: %d\n", sensor_data->temperature);
+            printf("sensor pressure: %d\n", sensor_data->pressure);
+            printf("sensor humidity: %d\n", sensor_data->humidity);
+            if (shmdt(sensor_data) < 0) {
+                perror("shmdt error");
+                exit(-1);
+            }
+        }
     }
 }
 
 
 void system_server() {
     printf("system_server Process\n");    
-
-    // init_sig_timer();
 
     for (int i=0; i<SERVER_QUEUE_NUM; i++) {
         system_queue[i] = mq_open(mq_dir[i], O_RDWR);
