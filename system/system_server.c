@@ -3,19 +3,25 @@
 #include <time.h>
 #include <string.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdbool.h>
 #include <mqueue.h>
+#include <errno.h>
 
 #include "../hal/camera_HAL.h"
 #include "../ui/input/toy.h"
 
 #define CAMERA_TAKE_PICTURE 1
 
-pthread_mutex_t system_loop_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t  system_loop_cond  = PTHREAD_COND_INITIALIZER;
-bool            system_loop_exit = false;    ///< true if main loop should exit
+pthread_mutex_t system_loop_mutex   = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t timer_mutex         = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  system_loop_cond    = PTHREAD_COND_INITIALIZER;
+bool            system_loop_exit    = false;    ///< true if main loop should exit
 
-static mqd_t system_queue[SERVER_THREAD_NUM];
+static sem_t global_timer_sem;
+static mqd_t system_queue[SERVER_QUEUE_NUM];
+static int timer = 0;
+static bool global_timer_stopped;
 
 const char *mq_dir[] = {
     WATCHDOG_QUEUE,
@@ -35,11 +41,9 @@ void* (*thread_function[SERVER_THREAD_NUM])(void*) = {
     (void* (*)(void*))watchdog_thread,
     (void* (*)(void*))monitor_thread,
     (void* (*)(void*))disk_service_thread,
-    (void* (*)(void*))camera_service_thread
+    (void* (*)(void*))camera_service_thread,
+    (void* (*)(void*))timer_thread
 };
-
-static int timer = 0;
-
 
 
 pid_t create_system_server() {
@@ -60,64 +64,45 @@ pid_t create_system_server() {
 }
 
 
-
-void signal_exit(void) {
-    /* 여기에 구현하세요..  종료 메시지를 보내도록.. */
-    if (pthread_mutex_lock(&system_loop_mutex) != 0) {
-        perror("system_loop_mutex");
-        exit(-1);
-    }
-
-    system_loop_exit = true;
-
-    if (pthread_mutex_unlock(&system_loop_mutex) != 0) {
-        perror("system_loop_mutex");
-        exit(-1);
-    }
-    pthread_cond_signal(&system_loop_cond);
+static void timer_expire_signal_handler() {
+    sem_post(&global_timer_sem);
 }
 
-
-static void timer_signal_handler(int sig, siginfo_t *si, void *uc) {
+static void system_timeout_handler() {
+    pthread_mutex_lock(&timer_mutex);
     timer++;
-    signal_exit();
-    // printf("system timer %d\n", timer);
+    printf("timer: %d\n", timer);
+    pthread_mutex_unlock(&timer_mutex);
 }
 
-void init_sig_timer() {
-    // sig action
-    struct sigaction  sa;
-    sa.sa_flags = SA_SIGINFO;
-    sa.sa_sigaction = timer_signal_handler;
-    sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGRTMAX, &sa, NULL) == -1) {
-        perror("sigaction");
-        exit(-1);
-    }
+void set_periodic_timer(long sec_delay, long usec_delay) {
+	struct itimerval itimer_val = {
+		 .it_interval = { .tv_sec = sec_delay, .tv_usec = usec_delay },
+		 .it_value = { .tv_sec = sec_delay, .tv_usec = usec_delay }
+    };
+	setitimer(ITIMER_REAL, &itimer_val, (struct itimerval*)0);
+}
 
-    struct sigevent sev;
-    timer_t tidlist;
-    sev.sigev_notify = SIGEV_SIGNAL;    /* Notify via signal */
-    sev.sigev_signo = SIGRTMAX;        /* Notify using this signal */
+void *timer_thread(void *arg)
+{
+    int thread_id = (int)arg;
+    printf("timer_thread start, id %d\n", thread_id);
 
-    sev.sigev_value.sival_ptr = &tidlist;
-    if (timer_create(CLOCK_REALTIME, &sev, &tidlist) == -1) {
-        perror("timer_create");
-        exit(-1);
-    }
+    signal(SIGALRM, timer_expire_signal_handler);
+    set_periodic_timer(1, 1);
 
-    // itimer
-    struct itimerspec ts;
-    ts.it_value.tv_sec = 10;
-    ts.it_value.tv_nsec = 0;
-    ts.it_interval.tv_sec = 10;
-    ts.it_interval.tv_nsec = 0;
+	while (!global_timer_stopped) {
+		int rc = sem_wait(&global_timer_sem);
+		if (rc == -1 && errno == EINTR)
+		    continue;
 
-    printf("start system server Timer\n");
-    if (timer_settime(tidlist, 0, &ts, NULL) == -1) {
-        perror("timer_settime");
-        exit(-1);
-    }    
+		if (rc == -1) {
+		    perror("sem_wait");
+		    exit(-1);
+		}
+		system_timeout_handler();
+	}
+	return ;
 }
 
 void *camera_service_thread(void* arg) {
@@ -206,9 +191,9 @@ void *monitor_thread(void* arg) {
 void system_server() {
     printf("system_server Process\n");    
 
-    init_sig_timer();
+    // init_sig_timer();
 
-    for (int i=0; i<SERVER_THREAD_NUM; i++) {
+    for (int i=0; i<SERVER_QUEUE_NUM; i++) {
         system_queue[i] = mq_open(mq_dir[i], O_RDWR);
         if (system_queue[i] == -1) {
             fprintf(stderr, "mq open err : %s\n", mq_dir[i]);
@@ -227,19 +212,6 @@ void system_server() {
         }        
     }
 
-    if (pthread_mutex_lock(&system_loop_mutex) != 0) {
-        perror("system_loop_mutex");
-        exit(-1);
-    }
-    while (system_loop_exit == false){
-        pthread_cond_wait(&system_loop_cond, &system_loop_mutex);
-        system_loop_exit = true;    
-    }
-    if (pthread_mutex_unlock(&system_loop_mutex) != 0) {
-        perror("system_loop_mutex");
-        exit(-1);
-    }
-    printf("<== system\n");
     while (1) {
         sleep(1);
     }

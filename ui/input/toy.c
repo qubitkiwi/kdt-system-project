@@ -7,7 +7,7 @@
 
 pthread_mutex_t global_message_mutex  = PTHREAD_MUTEX_INITIALIZER;
 char global_message[TOY_BUFFSIZE];
-mqd_t system_queue[SERVER_THREAD_NUM];
+mqd_t system_queue[SERVER_QUEUE_NUM];
 
 char *builtin_str[] = {
     "send",
@@ -136,7 +136,7 @@ void toy_loop(void)
     
     
     // mq_init(system_queue, O_RDWR);
-    for (int i=0; i<SERVER_THREAD_NUM; i++) {
+    for (int i=0; i<SERVER_QUEUE_NUM; i++) {
         system_queue[i] = mq_open(mq_dir[i], O_RDWR);
         if (system_queue[i] == -1) {
             fprintf(stderr, "mq open err : %s\n", mq_dir[i]);

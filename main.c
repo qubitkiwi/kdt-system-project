@@ -27,7 +27,7 @@ int main() {
         exit(-1);
     }
 
-    mqd_t mq_t[SERVER_THREAD_NUM];
+    mqd_t mq_t[SERVER_QUEUE_NUM];
     mq_init(mq_t, O_CREAT | O_RDWR | O_CLOEXEC);
         
     //
@@ -79,7 +79,7 @@ void mq_init(mqd_t *mqs_t, int flags) {
     attr.mq_maxmsg = 10;
     attr.mq_msgsize = sizeof(toy_msg_t);
 
-    for (int i=0; i<SERVER_THREAD_NUM; i++) {
+    for (int i=0; i<SERVER_QUEUE_NUM; i++) {
         mq_unlink(mq_dir[i]);
         mqs_t[i] = mq_open(mq_dir[i], flags, 0666, &attr);
         if (mqs_t[i] == -1) {
