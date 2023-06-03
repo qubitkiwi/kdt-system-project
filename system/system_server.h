@@ -24,11 +24,6 @@ void *disk_service_thread(void* arg);
 void *monitor_thread(void* arg);
 void *timer_thread(void *arg);
 
-
-// void signal_exit(void);
-// static void timer_signal_handler(int sig, siginfo_t *si, void *uc);
-
-
-
+long long get_directory_size(const char *path);
 
 #endif

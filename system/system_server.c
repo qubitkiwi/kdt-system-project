@@ -7,14 +7,20 @@
 #include <stdbool.h>
 #include <mqueue.h>
 #include <errno.h>
+#include <sys/inotify.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 #include "../hal/camera_HAL.h"
 #include "../ui/input/toy.h"
 #include "../sensor.h"
 #include <sys/shm.h>
 
+
 #define CAMERA_TAKE_PICTURE 1
 #define SENSOR_DATA 1
+#define BUF_SIZE 1024
+#define WATCH_DIR "./fs"
 
 pthread_mutex_t system_loop_mutex   = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t timer_mutex         = PTHREAD_MUTEX_INITIALIZER;
@@ -146,32 +152,81 @@ void *watchdog_thread(void* arg[]) {
     }
 }
 
+long long get_directory_size(const char *path) {
+    struct stat st;
+    long long total_size = 0;
+
+    if (stat(path, &st) == -1) {
+        perror("stat");
+        exit(EXIT_FAILURE);
+    }
+
+    if (S_ISDIR(st.st_mode)) {
+        DIR *dir = opendir(path);
+        if (dir == NULL) {
+            perror("opendir");
+            exit(EXIT_FAILURE);
+        }
+
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+                continue;
+
+            char child_path[PATH_MAX];
+            snprintf(child_path, PATH_MAX, "%s/%s", path, entry->d_name);
+
+            total_size += get_directory_size(child_path);
+        }
+
+        closedir(dir);
+    } else {
+        total_size = st.st_size;
+    }
+
+    return total_size;
+}
+
 void *disk_service_thread(void* arg) {
     int thread_id = (int)arg;
     toy_msg_t msg;
     printf("disk_service_thread start id %d\n", thread_id);
 
-    FILE* apipe;
-    char buf[1024];
-    char cmd[]="df -h ./";
+    char buf[BUF_SIZE];
+    long long total_size;
+    int watch_fd;
+    struct inotify_event* event;
+    watch_fd = inotify_init();
+    if (watch_fd == -1) {
+        perror("inotify_init");
+        return ;
+    }
     
+    if (inotify_add_watch(watch_fd, WATCH_DIR, IN_CREATE) == -1) {
+        perror("inotify_add_watch");
+        return ;
+    }
+  
     while (1) {
-        int num_read = mq_receive(system_queue[thread_id], (void*)&msg, sizeof(toy_msg_t), NULL);
-        if (num_read < 0) continue;
-        printf("watchdog_thread: 메시지가 도착했습니다.\n");
-        printf("msg.type: %d\n", msg.msg_type);
-        printf("msg.param1: %d\n", msg.param1);
-        printf("msg.param2: %d\n", msg.param2);
-    
-        apipe = popen(cmd, "r");
-        if (apipe == NULL) {
-            perror("popen");
+        int read_num = read(watch_fd, buf, BUF_SIZE);
+        if (read_num == 0) {
+            perror("read() from inotify fd returned 0!");
             continue;
         }
-        while (fgets(buf, 1024, apipe) != NULL) {
-            printf("%s", buf);
+        if (read_num == -1) {
+            perror("Read -1 bytes from inotify fd");
+            continue;
         }
-        pclose(apipe);
+
+        for (char *p=buf; p < buf+read_num; ) {
+            event = (struct inotify_event*) p;
+            if (event ->mask & IN_CREATE) {
+                printf("The file %s was created.\n", event->name);
+            }
+            p += sizeof(struct inotify_event) + event->len;
+        }
+        total_size = get_directory_size(WATCH_DIR);
+        printf("dir size : %ld\n", total_size);
     }
 }
 
