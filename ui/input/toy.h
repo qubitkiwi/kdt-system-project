@@ -3,6 +3,7 @@
 
 #include "../../common.h"
 #include <pthread.h>
+#include <elf.h>
 
 #define TOY_TOK_BUFSIZE 64
 #define TOY_TOK_DELIM " \t\r\n\a"
@@ -31,6 +32,8 @@ void toy_loop(void);
 
 int toy_mutex(char **args);
 int toy_message_queue(char **args);
+int toy_read_elf_header(char **args);
 
+void elf64_print (Elf64_Ehdr *elf_header);
 
 #endif

@@ -86,18 +86,18 @@ void *sensor_thread(void* arg) {
 
     while (1) {
         posix_sleep_ms(5000);
-        if (sensor_data != NULL) {
-            sensor_data->humidity = rand()%100;
-            sensor_data->pressure = rand();
-            sensor_data->temperature = rand()%40 - 10;
-        }
-        msg.msg_type = 1;
-        msg.param1 = shm_id;
-        msg.param2 = 0;
-        //MONITOR_QUEUE = system_queue[1]
-        if (mq_send(system_queue[1], (char *)&msg, sizeof(msg), 0) == -1) {
-            perror("mqretcode err");
-        }
+        // if (sensor_data != NULL) {
+        //     sensor_data->humidity = rand()%100;
+        //     sensor_data->pressure = rand();
+        //     sensor_data->temperature = rand()%40 - 10;
+        // }
+        // msg.msg_type = 1;
+        // msg.param1 = shm_id;
+        // msg.param2 = 0;
+        // //MONITOR_QUEUE = system_queue[1]
+        // if (mq_send(system_queue[1], (char *)&msg, sizeof(msg), 0) == -1) {
+        //     perror("mqretcode err");
+        // }
     }
 }
 

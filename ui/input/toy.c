@@ -1,9 +1,10 @@
 #include "toy.h"
-
+#include <sys/mman.h>
 #include <string.h>
 #include <wait.h>
-// #include <mqueue.h>
+#include <sys/stat.h>
 #include "../../system/system_server.h"
+
 
 pthread_mutex_t global_message_mutex  = PTHREAD_MUTEX_INITIALIZER;
 char global_message[TOY_BUFFSIZE];
@@ -14,6 +15,7 @@ char *builtin_str[] = {
     "mu",
     "sh",
     "mq",
+    "elf",
     "exit"
 };
 
@@ -22,6 +24,7 @@ int (*builtin_func[]) (char **) = {
     &toy_mutex,
     &toy_shell,
     &toy_message_queue,
+    &toy_read_elf_header,
     &toy_exit
 };
 
@@ -206,4 +209,48 @@ int toy_message_queue(char **args)
         }
     }
     return 1;
+}
+
+int toy_read_elf_header(char **args) {
+    int mqretcode;
+    toy_msg_t msg;
+    int in_fd;
+    size_t contents_sz;
+    struct stat sb;
+    Elf64_Ehdr* map;
+
+
+    in_fd = open("./sample/sample.elf", O_RDONLY);
+	if (in_fd < 0) {
+        perror("cannot open ./sample/sample.elf");
+        return 1;
+    }
+    if (fstat(in_fd, &sb) < 0) {
+        perror("fstat");
+        return 1;
+    }
+    contents_sz = sb.st_size;
+
+    map = (Elf64_Ehdr*)mmap(NULL, contents_sz, PROT_READ, MAP_PRIVATE, in_fd, 0);
+    elf64_print(map);
+    munmap(map, contents_sz);
+    close(in_fd);
+    return 1;
+}
+
+void elf64_print (Elf64_Ehdr *elf_header) {
+    printf("ELF file information:\n");
+    printf(" Class: %d\n", elf_header->e_ident[EI_CLASS]);
+    printf(" Data: %d\n", elf_header->e_ident[EI_DATA]);
+    printf(" Version: %d\n", elf_header->e_ident[EI_VERSION]);
+    printf(" OS/ABI: %d\n", elf_header->e_ident[EI_OSABI]);
+    printf(" Type: %d\n", elf_header->e_type);
+    printf(" Machine: %d\n", elf_header->e_machine);
+    printf(" Entry point address: %d\n", elf_header->e_entry);
+    printf(" Section header offset: %d\n", elf_header->e_shoff);
+    printf(" Number of section headers: %d\n", elf_header->e_shnum);
+    printf(" Size of section headers: %d\n", elf_header->e_shentsize);
+    printf(" Program header offset: %d\n", elf_header->e_phoff);
+    printf(" Number of program headers: %d\n", elf_header->e_phnum);
+    printf(" Size of program headers: %d\n", elf_header->e_phentsize);
 }
