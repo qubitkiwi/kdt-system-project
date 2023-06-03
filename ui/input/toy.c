@@ -16,6 +16,7 @@ char *builtin_str[] = {
     "sh",
     "mq",
     "elf",
+    "dump",
     "exit"
 };
 
@@ -25,6 +26,7 @@ int (*builtin_func[]) (char **) = {
     &toy_shell,
     &toy_message_queue,
     &toy_read_elf_header,
+    &toy_dump_state,
     &toy_exit
 };
 
@@ -253,4 +255,27 @@ void elf64_print (Elf64_Ehdr *elf_header) {
     printf(" Program header offset: %d\n", elf_header->e_phoff);
     printf(" Number of program headers: %d\n", elf_header->e_phnum);
     printf(" Size of program headers: %d\n", elf_header->e_phentsize);
+}
+
+int toy_dump_state(char **args) {
+
+    int mqretcode;
+    toy_msg_t msg;
+
+    msg.msg_type = DUMP_STATE;
+    msg.param1 = 0;
+    msg.param2 = 0;
+    // system_queue[3] == CAMERA_QUEUE
+    mqretcode = mq_send(system_queue[3], (char *)&msg, sizeof(msg), 0);
+    if (mqretcode == -1) {
+        perror("mq_send err");
+    }
+
+    // system_queue[1] == MONITOR_QUEUE
+    mqretcode = mq_send(system_queue[1], (char *)&msg, sizeof(msg), 0);
+    if (mqretcode == -1) {
+        perror("mq_send err");
+    }
+    
+    return 1;
 }

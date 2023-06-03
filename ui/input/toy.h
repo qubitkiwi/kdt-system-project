@@ -9,6 +9,10 @@
 #define TOY_TOK_DELIM " \t\r\n\a"
 #define TOY_BUFFSIZE 1024
 
+#define CAMERA_TAKE_PICTURE 1
+#define SENSOR_DATA 1
+#define DUMP_STATE 2
+
 typedef struct {
     unsigned int msg_type;
     unsigned int param1;
@@ -35,5 +39,6 @@ int toy_message_queue(char **args);
 int toy_read_elf_header(char **args);
 
 void elf64_print (Elf64_Ehdr *elf_header);
+int toy_dump_state();
 
 #endif

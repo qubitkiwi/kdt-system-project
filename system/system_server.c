@@ -10,15 +10,13 @@
 #include <sys/inotify.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/shm.h>
 
 #include "../hal/camera_HAL.h"
 #include "../ui/input/toy.h"
 #include "../sensor.h"
-#include <sys/shm.h>
+#include "./dump_state.h"
 
-
-#define CAMERA_TAKE_PICTURE 1
-#define SENSOR_DATA 1
 #define BUF_SIZE 1024
 #define WATCH_DIR "./fs"
 
@@ -133,6 +131,10 @@ void *camera_service_thread(void* arg) {
 
         if (msg.msg_type == CAMERA_TAKE_PICTURE) {
             toy_camera_take_picture();
+        } else if (msg.msg_type == DUMP_STATE) {
+            toy_camera_dump();
+        } else {
+            printf("camera_service_thread: unknown message %ld", msg.msg_type);
         }
     }
 }
@@ -259,6 +261,10 @@ void *monitor_thread(void* arg) {
                 perror("shmdt error");
                 exit(-1);
             }
+        } else if (msg.msg_type == DUMP_STATE) {
+            dump_state_print();
+        } else {
+            printf("monitor_thread: unknown message %ld", msg.msg_type);
         }
     }
 }
