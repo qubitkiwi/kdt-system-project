@@ -1,4 +1,5 @@
 *.o
+*.so
 filebrowser.db
 .vscode
 toy_system

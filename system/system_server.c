@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <sys/shm.h>
 
-#include "../hal/camera_HAL.h"
+#include "../hal/hardware.h"
 #include "../ui/input/toy.h"
 #include "../sensor.h"
 #include "./dump_state.h"
@@ -113,13 +113,20 @@ void *timer_thread(void *arg)
 }
 
 void *camera_service_thread(void* arg) {
-    // intptr_t thread_id = (intptr_t)arg;
     int thread_id = (int)arg;
     toy_msg_t msg;
     printf("camera_service_thread start, id %d\n", thread_id);
 
-    toy_camera_open();
-    toy_camera_take_picture();
+    int res;
+    hw_module_t *module = NULL;
+    res = hw_get_camera_module((const hw_module_t **)&module);
+    if (res < 0) {
+        perror("camera open fail");
+        exit(-1);
+    }
+    module->open();
+    // toy_camera_open();
+    // toy_camera_take_picture();
 
     while (1) {
         int num_read = mq_receive(system_queue[thread_id], (void*)&msg, sizeof(toy_msg_t), NULL);
@@ -130,9 +137,11 @@ void *camera_service_thread(void* arg) {
         printf("msg.param2: %d\n", msg.param2);
 
         if (msg.msg_type == CAMERA_TAKE_PICTURE) {
-            toy_camera_take_picture();
+            // toy_camera_take_picture();
+            module->take_picture();
         } else if (msg.msg_type == DUMP_STATE) {
-            toy_camera_dump();
+            // toy_camera_dump();
+            module->dump();
         } else {
             printf("camera_service_thread: unknown message %ld", msg.msg_type);
         }
