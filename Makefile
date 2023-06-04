@@ -6,8 +6,7 @@ WEB_SERVER = ./web_server
 HAL = ./hal
 
 objects = main.o system_server.o web_server.o input.o gui.o toy.o common.o dump_state.o hardware.o
-# cxx_objects = camera_HAL.o ControlThread.o
-CXXLIBS = -lrt -lpthread -ldl
+CXXLIBS = -lrt -lpthread -ldl -lseccomp
 CXX = g++
 shared_libs = libcamera.oem.so libcamera.toy.so
 
@@ -41,12 +40,6 @@ common.o: ./common.h common.c
 hardware.o: $(HAL)/hardware.c
 	$(CC) -g $(INCLUDES) -c  $(HAL)/hardware.c
 
-# camera_HAL.o: $(HAL)/camera_HAL.cpp
-# 	$(CXX) -c  $(HAL)/camera_HAL.cpp
-
-# ControlThread.o: $(HAL)/ControlThread.cpp
-# 	$(CXX) -c  $(HAL)/ControlThread.cpp
-
 # .PHONY: libcamera.oem.so
 libcamera.oem.so:
 	$(CXX) -shared -fPIC -o libcamera.oem.so $(HAL)/oem/camera_HAL_oem.cpp $(HAL)/oem/ControlThread.cpp
@@ -54,7 +47,6 @@ libcamera.oem.so:
 # .PHONY: libcamera.toy.so
 libcamera.toy.so:
 	$(CXX) -shared -fPIC -o libcamera.toy.so $(HAL)/toy/camera_HAL_toy.cpp $(HAL)/toy/ControlThread.cpp
-
 
 clean:
 	rm -rf *.o *.so

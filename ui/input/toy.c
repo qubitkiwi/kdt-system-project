@@ -3,6 +3,10 @@
 #include <string.h>
 #include <wait.h>
 #include <sys/stat.h>
+#include <seccomp.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/mman.h>
 #include "../../system/system_server.h"
 
 
@@ -17,6 +21,7 @@ char *builtin_str[] = {
     "mq",
     "elf",
     "dump",
+    "mincore",
     "exit"
 };
 
@@ -27,6 +32,7 @@ int (*builtin_func[]) (char **) = {
     &toy_message_queue,
     &toy_read_elf_header,
     &toy_dump_state,
+    &toy_mincore,
     &toy_exit
 };
 
@@ -138,7 +144,30 @@ void toy_loop(void)
     char *line;
     char **args;
     int status;
-    
+
+    // lock mincore
+    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+    if (ctx == NULL) {
+        perror("seccomp_init err");
+        exit(-1);
+    }
+
+    int rc = seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mincore), 0);
+    if (rc < 0) {
+        perror("seccomp_rule_add err");
+        exit(-1);
+    }
+
+    seccomp_export_pfc(ctx, 5);
+    seccomp_export_bpf(ctx, 6);
+
+    rc = seccomp_load(ctx);
+    if (rc < 0) {
+        perror("seccomp_load err");
+        exit(-1);
+    }
+
+    seccomp_release(ctx);
     
     // mq_init(system_queue, O_RDWR);
     for (int i=0; i<SERVER_QUEUE_NUM; i++) {
@@ -277,5 +306,20 @@ int toy_dump_state(char **args) {
         perror("mq_send err");
     }
     
+    return 1;
+}
+
+int toy_mincore(char **args)
+{
+    unsigned char vec[20];
+    int res;
+    size_t page = sysconf(_SC_PAGESIZE);
+    void *addr = mmap(NULL, 20 * page, PROT_READ | PROT_WRITE,
+                    MAP_NORESERVE | MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    res = mincore(addr, 10 * page, vec);
+    if (res == -1) {
+        perror("mincore == -1");
+    }
+
     return 1;
 }

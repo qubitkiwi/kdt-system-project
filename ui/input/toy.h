@@ -40,5 +40,6 @@ int toy_read_elf_header(char **args);
 
 void elf64_print (Elf64_Ehdr *elf_header);
 int toy_dump_state();
+int toy_mincore(char **args);
 
 #endif
