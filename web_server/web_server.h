@@ -3,7 +3,7 @@
 
 #include "../common.h"
 
-int create_web_server();
-void web_server();
+pid_t create_web_server();
+int web_server();
 
 #endif

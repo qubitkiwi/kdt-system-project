@@ -109,7 +109,6 @@ void *timer_thread(void *arg)
 		}
 		system_timeout_handler();
 	}
-	return ;
 }
 
 void *camera_service_thread(void* arg) {
