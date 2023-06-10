@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "system_server.h"
 #include <signal.h>
 #include <time.h>
@@ -11,6 +12,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/shm.h>
+#include <sched.h>
 
 #include "../hal/hardware.h"
 #include "../ui/input/toy.h"
@@ -41,15 +43,20 @@ const char *thread_name[] = {
     "watchdog",
     "monitor",
     "disk",
-    "camera"
+    "camera",
+    "timer_thread",
+    "engine_thread"
 };
+
+const int thread_ID[] = {0, 1, 2, 3, 4, 5};
 
 void* (*thread_function[SERVER_THREAD_NUM])(void*) = {
     (void* (*)(void*))watchdog_thread,
     (void* (*)(void*))monitor_thread,
     (void* (*)(void*))disk_service_thread,
     (void* (*)(void*))camera_service_thread,
-    (void* (*)(void*))timer_thread
+    (void* (*)(void*))timer_thread,
+    (void* (*)(void*))engine_thread
 };
 
 
@@ -92,7 +99,7 @@ void set_periodic_timer(long sec_delay, long usec_delay) {
 
 void *timer_thread(void *arg)
 {
-    int thread_id = (int)arg;
+    int thread_id = *((int*)arg);
     printf("timer_thread start, id %d\n", thread_id);
 
     signal(SIGALRM, timer_expire_signal_handler);
@@ -112,7 +119,7 @@ void *timer_thread(void *arg)
 }
 
 void *camera_service_thread(void* arg) {
-    int thread_id = (int)arg;
+    int thread_id = *((int*)arg);
     toy_msg_t msg;
     printf("camera_service_thread start, id %d\n", thread_id);
 
@@ -148,7 +155,7 @@ void *camera_service_thread(void* arg) {
 }
 
 void *watchdog_thread(void* arg[]) {
-    int thread_id = (int)arg;
+    int thread_id = *((int*)arg);
     toy_msg_t msg;
     printf("watchdog_thread start id %d\n", thread_id);
 
@@ -198,7 +205,7 @@ long long get_directory_size(const char *path) {
 }
 
 void *disk_service_thread(void* arg) {
-    int thread_id = (int)arg;
+    int thread_id = *((int*)arg);
     toy_msg_t msg;
     printf("disk_service_thread start id %d\n", thread_id);
 
@@ -209,12 +216,12 @@ void *disk_service_thread(void* arg) {
     watch_fd = inotify_init();
     if (watch_fd == -1) {
         perror("inotify_init");
-        return ;
+        return (void*)-1;
     }
     
     if (inotify_add_watch(watch_fd, WATCH_DIR, IN_CREATE) == -1) {
         perror("inotify_add_watch");
-        return ;
+        return (void*)-1;
     }
   
     while (1) {
@@ -241,7 +248,7 @@ void *disk_service_thread(void* arg) {
 }
 
 void *monitor_thread(void* arg) {
-    int thread_id = (int)arg;
+    int thread_id = *((int*)arg);
     toy_msg_t msg;
     int shm_id, rev_shm_id;
     sensor_data_t *sensor_data = NULL;
@@ -277,6 +284,33 @@ void *monitor_thread(void* arg) {
     }
 }
 
+void *engine_thread(void *arg)
+{
+    int thread_id = *((int*)arg);
+    printf("engine_thread start id %d\n", thread_id);
+
+    cpu_set_t set;
+    struct sched_param sp;
+
+    CPU_ZERO(&set);
+    // 0번 cpu만 사용
+    CPU_SET(0, &set);
+    if (sched_setaffinity(gettid(), sizeof(set), &set) == -1) {
+        perror("sched_setaffinity err");
+        return (void*)-1;
+    }
+
+    sp.sched_priority = 50;
+    if (sched_setscheduler(gettid(), SCHED_RR, &sp) == -1) {
+        perror("sched_setscheduler err");
+        return (void*)-1;
+    }
+
+    
+    while (1) {
+        posix_sleep_ms(10000);
+    }
+}
 
 void system_server() {
     printf("system_server Process\n");    
@@ -294,7 +328,7 @@ void system_server() {
 
     pthread_t thread_id[SERVER_THREAD_NUM];
     for (int i=0; i<SERVER_THREAD_NUM; i++) {
-        if (pthread_create(thread_id, NULL, thread_function[i], i) != 0) {
+        if (pthread_create(thread_id, NULL, thread_function[i], (void*)&thread_ID[i]) != 0) {
             fprintf(stderr,"%s thread err\n", thread_name);
             exit(-1);
         }        
