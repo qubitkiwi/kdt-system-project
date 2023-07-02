@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 #include "../../system/system_server.h"
 
+#define GPIO_DRIVER "/dev/gpio_driver"
 
 pthread_mutex_t global_message_mutex  = PTHREAD_MUTEX_INITIALIZER;
 char global_message[TOY_BUFFSIZE];
@@ -23,6 +24,7 @@ char *builtin_str[] = {
     "dump",
     "mincore",
     "busy",
+    "n",
     "exit"
 };
 
@@ -35,6 +37,7 @@ int (*builtin_func[]) (char **) = {
     &toy_dump_state,
     &toy_mincore,
     &toy_busy,
+    &toy_simple_io,
     &toy_exit
 };
 
@@ -330,5 +333,36 @@ int toy_busy(char **args)
 {
     while (1)
         ;
+    return 1;
+}
+
+int toy_simple_io(char **args)
+{
+    int dev;
+    char buff = 2;
+
+    dev = open(GPIO_DRIVER, O_RDWR | O_NDELAY);
+	if (dev < 0 ) {
+        perror("module open error");
+        return 1;
+    }
+
+    if (args[1] != NULL && !strcmp(args[1], "exit")) {
+        buff = 2;
+        if (write(dev, &buff, 1) < 0) {
+            perror("write error");
+            goto err;
+        }
+    } else {
+        buff = 1;
+        if (write(dev, &buff, 1) < 0) {
+            perror("write error");
+            goto err;
+        }
+    }
+
+    err:
+    close(dev);
+
     return 1;
 }
