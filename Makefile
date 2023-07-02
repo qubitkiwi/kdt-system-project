@@ -1,3 +1,10 @@
+BUILDROOT_DIR=~/Desktop/kdt/buildroot
+TOOLCHAIN_DIR=${BUILDROOT_DIR}/output/host/bin
+
+CC=${TOOLCHAIN_DIR}/aarch64-buildroot-linux-gnu-gcc
+CXX=${TOOLCHAIN_DIR}/aarch64-buildroot-linux-gnu-g++
+
+
 TARGET = toy_system
 
 SYSTEM = ./system
@@ -7,7 +14,7 @@ HAL = ./hal
 
 objects = main.o system_server.o web_server.o input.o gui.o toy.o common.o dump_state.o hardware.o
 CXXLIBS = -lrt -lpthread -ldl -lseccomp
-CXX = g++
+HALLIBS = -shared -fPIC
 shared_libs = libcamera.oem.so libcamera.toy.so
 
 $(TARGET): $(objects) $(cxx_objects) $(shared_libs)
@@ -40,13 +47,13 @@ common.o: ./common.h common.c
 hardware.o: $(HAL)/hardware.c
 	$(CC) -g $(INCLUDES) -c  $(HAL)/hardware.c
 
-# .PHONY: libcamera.oem.so
+.PHONY: libcamera.oem.so
 libcamera.oem.so:
-	$(CXX) -shared -fPIC -o libcamera.oem.so $(HAL)/oem/camera_HAL_oem.cpp $(HAL)/oem/ControlThread.cpp
+	$(CXX) $(HALLIBS) -o libcamera.oem.so $(HAL)/oem/camera_HAL_oem.cpp $(HAL)/oem/ControlThread.cpp
 
-# .PHONY: libcamera.toy.so
+.PHONY: libcamera.toy.so
 libcamera.toy.so:
-	$(CXX) -shared -fPIC -o libcamera.toy.so $(HAL)/toy/camera_HAL_toy.cpp $(HAL)/toy/ControlThread.cpp
+	$(CXX) $(HALLIBS) -o libcamera.toy.so $(HAL)/toy/camera_HAL_toy.cpp $(HAL)/toy/ControlThread.cpp
 
 clean:
 	rm -rf *.o *.so
