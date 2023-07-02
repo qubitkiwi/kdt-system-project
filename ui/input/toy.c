@@ -22,6 +22,7 @@ char *builtin_str[] = {
     "elf",
     "dump",
     "mincore",
+    "busy",
     "exit"
 };
 
@@ -33,6 +34,7 @@ int (*builtin_func[]) (char **) = {
     &toy_read_elf_header,
     &toy_dump_state,
     &toy_mincore,
+    &toy_busy,
     &toy_exit
 };
 
@@ -321,5 +323,12 @@ int toy_mincore(char **args)
         perror("mincore == -1");
     }
 
+    return 1;
+}
+
+int toy_busy(char **args)
+{
+    while (1)
+        ;
     return 1;
 }

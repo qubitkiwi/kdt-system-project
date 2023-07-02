@@ -55,6 +55,10 @@ libcamera.oem.so:
 libcamera.toy.so:
 	$(CXX) $(HALLIBS) -o libcamera.toy.so $(HAL)/toy/camera_HAL_toy.cpp $(HAL)/toy/ControlThread.cpp
 
+.PHONY: nfs
+nfs:
+	cp $(TARGET) ~/Desktop/nfs_rpi
+
 clean:
 	rm -rf *.o *.so
 	rm -rf $(TARGET)
