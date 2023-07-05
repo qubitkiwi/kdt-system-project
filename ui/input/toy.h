@@ -42,7 +42,9 @@ void elf64_print (Elf64_Ehdr *elf_header);
 int toy_dump_state();
 int toy_mincore(char **args);
 int toy_busy(char **args);
-int toy_simple_io(char **args);
 
+int toy_simple_io(char **args);
+int toy_set_motor_1_speed(char **args);
+int toy_set_motor_2_speed(char **args);
 
 #endif

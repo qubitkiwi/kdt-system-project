@@ -7,9 +7,13 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
 #include "../../system/system_server.h"
 
 #define GPIO_DRIVER "/dev/gpio_driver"
+#define ENGINE_DRIVER "/dev/engine_driver"
+#define MOTOR_1_SET_SPEED _IOW('w', '1', int32_t *)
+#define MOTOR_2_SET_SPEED _IOW('w', '2', int32_t *)
 
 pthread_mutex_t global_message_mutex  = PTHREAD_MUTEX_INITIALIZER;
 char global_message[TOY_BUFFSIZE];
@@ -25,6 +29,8 @@ char *builtin_str[] = {
     "mincore",
     "busy",
     "n",
+    "m1",
+    "m2",
     "exit"
 };
 
@@ -38,6 +44,8 @@ int (*builtin_func[]) (char **) = {
     &toy_mincore,
     &toy_busy,
     &toy_simple_io,
+    &toy_set_motor_1_speed,
+    &toy_set_motor_2_speed,
     &toy_exit
 };
 
@@ -364,5 +372,65 @@ int toy_simple_io(char **args)
     err:
     close(dev);
 
+    return 1;
+}
+
+int toy_set_motor_1_speed(char **args)
+{
+    int dev, speed;
+
+    if (args[1] == NULL) {
+        perror("moter1 arg err");
+        return 1;
+    }
+
+    speed = atoi(args[1]);
+    speed = (speed > 100) ? 100 : speed;
+    speed = (speed <= 0) ? 1 : speed;
+
+
+
+    dev = open(ENGINE_DRIVER, O_RDWR | O_NDELAY);
+	if (dev < 0) {
+        perror("ENGINE_DRIVER module open error");
+        return 1;
+    }
+
+    if (ioctl(dev, MOTOR_1_SET_SPEED, &speed) < 0) {
+        perror("Error while ioctl READ_USE_COUNT (before) in main");
+        goto err;
+    }
+
+err:
+    close(dev);
+    return 1;
+}
+
+int toy_set_motor_2_speed(char **args)
+{
+    int dev, speed;
+
+    if (args[1] == NULL) {
+        perror("moter2 arg err");
+        return 1;
+    }
+
+    speed = atoi(args[1]);
+    speed = (speed > 100) ? 100 : speed;
+    speed = (speed <= 0) ? 1 : speed;
+
+    dev = open(ENGINE_DRIVER, O_RDWR | O_NDELAY);
+	if (dev < 0) {
+        perror("ENGINE_DRIVER module open error");
+        return 1;
+    }
+
+    if (ioctl(dev, MOTOR_2_SET_SPEED, &speed) < 0) {
+        perror("Error while ioctl READ_USE_COUNT (before) in main\n");
+        goto err;
+    }
+
+err:
+    close(dev);
     return 1;
 }

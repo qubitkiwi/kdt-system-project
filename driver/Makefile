@@ -1,4 +1,4 @@
-obj-m := simple_io.o
+obj-m := simple_io.o engine.o
 
 export BUILDROOT=/home/song/Desktop/kdt/buildroot
 export ARCH=arm64
@@ -14,4 +14,4 @@ modules modules_install help clean:
 
 .PHONY: nfs
 nfs:
-	cp simple_io.ko ~/Desktop/nfs_rpi
+	cp simple_io.ko engine.ko ~/Desktop/nfs_rpi
