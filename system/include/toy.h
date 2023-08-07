@@ -1,8 +1,6 @@
 #ifndef _TOY_H
 #define _TOY_H
 
-#include "../../common.h"
-#include <pthread.h>
 #include <elf.h>
 
 #define TOY_TOK_BUFSIZE 64
@@ -20,6 +18,8 @@ typedef struct {
     void *param3;
 } toy_msg_t;
 
+void toy_main(void);
+
 int toy_send(char **args);
 int toy_shell(char **args);
 int toy_exit(char **args);
@@ -31,8 +31,6 @@ int toy_shell(char **args);
 int toy_execute(char **args);
 char *toy_read_line(void);
 char **toy_split_line(char *line);
-
-void toy_loop(void);
 
 int toy_mutex(char **args);
 int toy_message_queue(char **args);

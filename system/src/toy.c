@@ -1,14 +1,18 @@
 #include "toy.h"
-#include <sys/mman.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <wait.h>
-#include <sys/stat.h>
 #include <seccomp.h>
 #include <errno.h>
 #include <unistd.h>
+
+#include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
-#include "../../system/system_server.h"
+
+#include "system_server.h"
 
 #define GPIO_DRIVER "/dev/gpio_driver"
 #define ENGINE_DRIVER "/dev/engine_driver"
@@ -106,7 +110,7 @@ int toy_execute(char **args)
 char *toy_read_line(void)
 {
     char *line = NULL;
-    ssize_t bufsize = 0;
+    size_t bufsize = 0;
 
     if (getline(&line, &bufsize, stdin) == -1) {
         if (feof(stdin)) {
@@ -152,7 +156,7 @@ char **toy_split_line(char *line)
     return tokens;
 }
 
-void toy_loop(void)
+void toy_main(void)
 {
     char *line;
     char **args;
@@ -290,11 +294,11 @@ void elf64_print (Elf64_Ehdr *elf_header) {
     printf(" OS/ABI: %d\n", elf_header->e_ident[EI_OSABI]);
     printf(" Type: %d\n", elf_header->e_type);
     printf(" Machine: %d\n", elf_header->e_machine);
-    printf(" Entry point address: %d\n", elf_header->e_entry);
-    printf(" Section header offset: %d\n", elf_header->e_shoff);
+    printf(" Entry point address: %ld\n", elf_header->e_entry);
+    printf(" Section header offset: %ld\n", elf_header->e_shoff);
     printf(" Number of section headers: %d\n", elf_header->e_shnum);
     printf(" Size of section headers: %d\n", elf_header->e_shentsize);
-    printf(" Program header offset: %d\n", elf_header->e_phoff);
+    printf(" Program header offset: %ld\n", elf_header->e_phoff);
     printf(" Number of program headers: %d\n", elf_header->e_phnum);
     printf(" Size of program headers: %d\n", elf_header->e_phentsize);
 }

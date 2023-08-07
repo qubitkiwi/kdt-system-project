@@ -1,23 +1,27 @@
 #define _GNU_SOURCE
 #include "system_server.h"
+#include "toy.h"
+#include "hardware.h"
+#include "sensor.h"
+#include "dump_state.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 #include <signal.h>
 #include <time.h>
-#include <string.h>
-#include <pthread.h>
 #include <semaphore.h>
-#include <stdbool.h>
 #include <mqueue.h>
 #include <errno.h>
-#include <sys/inotify.h>
 #include <dirent.h>
+#include <sched.h>
+#include <sys/inotify.h>
 #include <sys/stat.h>
 #include <sys/shm.h>
-#include <sched.h>
+#include <sys/time.h>
 
-#include "../hal/hardware.h"
-#include "../ui/input/toy.h"
-#include "../sensor.h"
-#include "./dump_state.h"
+
 
 #define BUF_SIZE 1024
 #define WATCH_DIR "./fs"
@@ -116,6 +120,7 @@ void *timer_thread(void *arg)
 		}
 		system_timeout_handler();
 	}
+    return NULL;
 }
 
 void *camera_service_thread(void* arg) {
@@ -149,7 +154,7 @@ void *camera_service_thread(void* arg) {
             // toy_camera_dump();
             module->dump();
         } else {
-            printf("camera_service_thread: unknown message %ld", msg.msg_type);
+            printf("camera_service_thread: unknown message %u", msg.msg_type);
         }
     }
 }
@@ -243,7 +248,7 @@ void *disk_service_thread(void* arg) {
             p += sizeof(struct inotify_event) + event->len;
         }
         total_size = get_directory_size(WATCH_DIR);
-        printf("dir size : %ld\n", total_size);
+        printf("dir size : %lld\n", total_size);
     }
 }
 
@@ -279,7 +284,7 @@ void *monitor_thread(void* arg) {
         } else if (msg.msg_type == DUMP_STATE) {
             dump_state_print();
         } else {
-            printf("monitor_thread: unknown message %ld", msg.msg_type);
+            printf("monitor_thread: unknown message %u", msg.msg_type);
         }
     }
 }
@@ -329,7 +334,7 @@ void system_server() {
     pthread_t thread_id[SERVER_THREAD_NUM];
     for (int i=0; i<SERVER_THREAD_NUM; i++) {
         if (pthread_create(thread_id, NULL, thread_function[i], (void*)&thread_ID[i]) != 0) {
-            fprintf(stderr,"%s thread err\n", thread_name);
+            fprintf(stderr,"%s thread err\n", thread_name[i]);
             exit(-1);
         }        
     }

@@ -1,11 +1,13 @@
 #ifndef _INPUT_H
 #define _INPUT_H
 
-#include "../common.h"
-#include "./input/toy.h"
+#include "posix_timer.h"
+#include "toy.h"
+
 #include <signal.h>
 #include <ucontext.h>
-#include <execinfo.h>   
+#include <execinfo.h>
+#include <pthread.h>
 
 typedef struct _sig_ucontext {
     unsigned long uc_flags;
@@ -15,7 +17,7 @@ typedef struct _sig_ucontext {
     sigset_t uc_sigmask;
 } sig_ucontext_t;
 
-int create_input();
-void input();
+pid_t create_input();
+void input_main();
 
 #endif

@@ -1,19 +1,20 @@
-#include "./system/system_server.h"
-#include "./ui/gui.h"
-#include "./ui/input.h"
-#include "./web_server/web_server.h"
+#include "system_server.h"
+#include "gui.h"
+#include "input.h"
+#include "web_server.h"
 
 #include <stdio.h>
-#include <sys/wait.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 /* signal을 받으면 자식 프로세스를 종료한 뒤 종료 */
 static void sigchldHandler(int sig);
 void mq_init(mqd_t *mq_t, int flags);
 
-int main() {
-
+int main()
+{
     pid_t system_pid, gui_pid, input_pid, web_pid;
     int status, savedErrno;
 

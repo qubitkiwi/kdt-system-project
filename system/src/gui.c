@@ -1,4 +1,11 @@
 #include "gui.h"
+#include "posix_timer.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <unistd.h>
+
 
 pid_t create_gui() {
     
@@ -11,12 +18,12 @@ pid_t create_gui() {
         if (prctl(PR_SET_NAME, (unsigned long) name) < 0) {
             perror("prctl()");
         }
-        gui();
+        gui_main();
     }
     return gui_pid;
 }
 
-void gui() {
+void gui_main() {
     printf("gui Process\n");
 
 	execl("/usr/bin/chromium-browser", "chromium-browser", "http://0.0.0.0:8080", NULL);

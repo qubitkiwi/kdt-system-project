@@ -1,8 +1,14 @@
 #include "input.h"
+#include "toy.h"
+#include "sensor.h"
+#include "system_server.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
-#include "../sensor.h"
-#include "../system/system_server.h"
 #include <sys/shm.h>
+
 
 static mqd_t system_queue[SERVER_QUEUE_NUM];
 
@@ -18,7 +24,8 @@ void segfault_handler(int sig_num, siginfo_t * info, void * ucontext) {
 
     /* Get the address at the time the signal was raised */
     // rpi4
-    caller_address = (void *) uc->uc_mcontext.pc;  // RIP: x86_64 specific     arm_pc: ARM
+    // caller_address = (void *) uc->uc_mcontext.pc;  // RIP: x86_64 specific     arm_pc: ARM
+    caller_address = (void *) uc->uc_mcontext.rip; // x86-64
 
     fprintf(stderr, "\n");
 
@@ -54,7 +61,7 @@ pid_t create_input() {
         if (prctl(PR_SET_NAME, (unsigned long) name) < 0) {
             perror("prctl()");
         }
-        input();
+        input_main();
     }
     return input_pid;
 }
@@ -63,7 +70,9 @@ void *command_thread(void* arg) {
     char *s = arg;
     printf("%s start\n", s);
 
-    toy_loop();
+    toy_main();
+    
+    return NULL;
 }
 
 void *sensor_thread(void* arg) {
@@ -86,22 +95,22 @@ void *sensor_thread(void* arg) {
 
     while (1) {
         posix_sleep_ms(5000);
-        // if (sensor_data != NULL) {
-        //     sensor_data->humidity = rand()%100;
-        //     sensor_data->pressure = rand();
-        //     sensor_data->temperature = rand()%40 - 10;
-        // }
-        // msg.msg_type = 1;
-        // msg.param1 = shm_id;
-        // msg.param2 = 0;
-        // //MONITOR_QUEUE = system_queue[1]
-        // if (mq_send(system_queue[1], (char *)&msg, sizeof(msg), 0) == -1) {
-        //     perror("mqretcode err");
-        // }
+        if (sensor_data != NULL) {
+            sensor_data->humidity = rand()%100;
+            sensor_data->pressure = rand();
+            sensor_data->temperature = rand()%40 - 10;
+        }
+        msg.msg_type = 1;
+        msg.param1 = shm_id;
+        msg.param2 = 0;
+        //MONITOR_QUEUE = system_queue[1]
+        if (mq_send(system_queue[1], (char *)&msg, sizeof(msg), 0) == -1) {
+            perror("mqretcode err");
+        }
     }
 }
 
-void input() {
+void input_main() {
     printf("input Process\n");
 
     /* SIGSEGV 시그널 등록 */

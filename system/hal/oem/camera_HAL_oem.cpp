@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <unistd.h>
 
-#include "../hardware.h"
+#include "hardware.h"
 
 #include "camera_HAL_oem.h"
 #include "ControlThread.h"

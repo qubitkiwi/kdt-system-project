@@ -1,8 +1,9 @@
 #ifndef _SYSTEM_SERVER_H
 #define _SYSTEM_SERVER_H
 
-#include "../common.h"
+#include "posix_timer.h"
 #include <mqueue.h>
+#include <pthread.h>
 
 #define SERVER_THREAD_NUM 6
 #define SERVER_QUEUE_NUM 4

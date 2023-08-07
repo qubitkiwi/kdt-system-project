@@ -29,8 +29,8 @@ static char* DUMP_CMD[] = {
 #define BUFFER_SIZE 1024
 
 void dump_state_print(){
-    for (int i=0; i<sizeof(DUMP_CMD)/sizeof(DUMP_CMD[0]); i++) {
-        printf("==================== %d ==================\n", i);
+    for (long unsigned int i=0; i<sizeof(DUMP_CMD)/sizeof(DUMP_CMD[0]); i++) {
+        printf("==================== %ld ==================\n", i);
         dump_file_print(DUMP_CMD[i]);
     }
     do_dmesg();

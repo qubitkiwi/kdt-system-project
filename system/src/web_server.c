@@ -1,6 +1,8 @@
 #define _GNU_SOURCE
 
 #include "web_server.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <errno.h>
@@ -30,7 +32,8 @@ pid_t create_web_server() {
     return web_pid;
 }
 
-int web_server() {
+int web_server()
+{
     printf("web server Process\n");
 
     char path[1024];
@@ -56,4 +59,5 @@ int web_server() {
     printf("hostname: %s\n", uts.nodename);
 
     execl("/usr/local/bin/filebrowser", "filebrowser", "-a", "0.0.0.0", "-p", "8080", (char *) NULL);
+    return 0;
 }
