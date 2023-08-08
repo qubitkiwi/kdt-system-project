@@ -1,34 +1,61 @@
 CC := gcc
-CFLAGS := -Wall #-Wextra
-
+CFLAGS := -Wall -Wextra
 INCLUDE = -Iinclude
 LDFLAGS = -lrt -lpthread -ldl -lseccomp
 
 CXX := g++
-CXXFLAGS := -Wall -Wextra
-
-HALLIBS = -shared -fPIC
-shared_libs = libcamera.oem.so libcamera.toy.so
+CXXFLAGS := -std=c++14 -Wall -Wextra
 
 SRC_DIR := src
 BUILD_DIR := build
-TARGET := toy_system
+
+HAL_SRC_DIR := ./hal
+LIB_DIR := ./lib
+HAL_TOY_DIR := $(HAL_SRC_DIR)/toy
+HAL_OEM_DIR := $(HAL_SRC_DIR)/oem
+
+TARGET := system
 
 CC_SOURCES := $(wildcard $(SRC_DIR)/*.c)
 CC_OBJECTS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(CC_SOURCES))
 
-all: $(TARGET)
+HAL_TOY_LIB := $(LIB_DIR)/libcamera.toy.so
+HAL_OEM_LIB := $(LIB_DIR)/libcamera.oem.so
 
-$(TARGET): $(CC_OBJECTS)
+HAL_TOY_SRCS := $(wildcard $(HAL_TOY_DIR)/*.cpp)
+HAL_TOY_OBJS := $(patsubst $(HAL_TOY_DIR)/%.cpp,$(BUILD_DIR)/toy/%.o,$(HAL_TOY_SRCS))
+
+HAL_OEM_SRCS := $(wildcard $(HAL_OEM_DIR)/*.cpp)
+HAL_OEM_OBJS := $(patsubst $(HAL_OEM_DIR)/%.cpp,$(BUILD_DIR)/oem/%.o,$(HAL_OEM_SRCS))
+
+
+all: $(TARGET) $(HAL_TOY_LIB) $(HAL_OEM_LIB)
+
+$(TARGET): $(CC_OBJECTS) 
 	$(CC) $(CFLAGS) $(INCLUDE) -o $@ $(CC_OBJECTS) $(LDFLAGS)
 
-# Rule to build C source files object files with gcc
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(@D)  # Create the build directory if it doesn't exist
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(INCLUDE) -c -o $@ $<
 
-# Clean rule to remove all generated files
-clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+# HAL
+$(HAL_TOY_LIB): $(HAL_TOY_OBJS)
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -shared $^ -o $@
 
-# -include $(DEPS)
+$(HAL_OEM_LIB): $(HAL_OEM_OBJS)
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -shared $^ -o $@
+
+$(BUILD_DIR)/toy/%.o: $(HAL_TOY_DIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -fPIC -c $< -o $@
+
+$(BUILD_DIR)/oem/%.o: $(HAL_OEM_DIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -fPIC -c $< -o $@
+
+
+
+clean:
+	rm -rf $(BUILD_DIR) $(TARGET) $(LIB_DIR)

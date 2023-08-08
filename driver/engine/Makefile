@@ -1,6 +1,6 @@
-obj-m := simple_io.o engine.o
+obj-m := engine.o
 
-export BUILDROOT=/home/song/Desktop/kdt/buildroot
+export BUILDROOT=~/Desktop/kdt/buildroot
 export ARCH=arm64
 export CROSS_COMPILE=$(BUILDROOT)/output/host/bin/aarch64-buildroot-linux-gnu-
 
