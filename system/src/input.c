@@ -80,25 +80,25 @@ void *sensor_thread(void* arg) {
     printf("%s start\n", s);
     toy_msg_t msg;
     int shm_id;
-    sensor_data_t *sensor_data = NULL;
+    BMP280_data_t *BMP280_data = NULL;
 
-    shm_id = shmget((key_t)SHM_SENSOR_KEY, sizeof(sensor_data_t), 0666 | IPC_CREAT);
+    shm_id = shmget((key_t)SHM_BMP280_KEY, sizeof(BMP280_data_t), 0666 | IPC_CREAT);
     if (shm_id == -1) {
         perror("shmget err");
         exit(-1);
     }
-    sensor_data = shmat(shm_id, (void *)0, 0);
-    if (sensor_data == (void *)-1) {
+    BMP280_data = shmat(shm_id, (void *)0, 0);
+    if (BMP280_data == (void *)-1) {
         perror("shmat err");
         exit(-1);
     }
 
     while (1) {
         posix_sleep_ms(5000);
-        if (sensor_data != NULL) {
-            sensor_data->humidity = rand()%100;
-            sensor_data->pressure = rand();
-            sensor_data->temperature = rand()%40 - 10;
+        if (BMP280_data != NULL) {
+            BMP280_data->humidity = rand()%100;
+            BMP280_data->pressure = rand();
+            BMP280_data->temperature = rand()%40 - 10;
         }
         msg.msg_type = 1;
         msg.param1 = shm_id;

@@ -8,7 +8,7 @@
 #define TOY_BUFFSIZE 1024
 
 #define CAMERA_TAKE_PICTURE 1
-#define SENSOR_DATA 1
+#define BMP280_SENSOR_DATA 1
 #define DUMP_STATE 2
 
 typedef struct {
