@@ -1,6 +1,4 @@
-*.o
-*.so
-filebrowser.db
 .vscode
 build/*
-toy_system
+lib/*
+system
