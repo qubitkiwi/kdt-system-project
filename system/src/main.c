@@ -14,7 +14,7 @@ void mq_init(mqd_t *mq_t, int flags);
 
 int main()
 {
-    pid_t system_pid, gui_pid, input_pid, web_pid;
+    pid_t system_pid, input_pid, web_pid;
     int status, savedErrno;
 
     /* SIGCHLD 시그널  등록 */
@@ -42,7 +42,6 @@ int main()
 
 
     waitpid(system_pid, &status, 0);
-    waitpid(gui_pid, &status, 0);
     waitpid(input_pid, &status, 0);
     waitpid(web_pid, &status, 0);
 
