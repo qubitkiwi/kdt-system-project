@@ -1,5 +1,4 @@
 #include "system_server.h"
-#include "gui.h"
 #include "input.h"
 #include "web_server.h"
 
@@ -36,8 +35,6 @@ int main()
     
     printf("system server createing\n");
     system_pid = create_system_server();
-    printf("gui createing\n");
-    gui_pid = create_gui();
     printf("input createing\n");
     input_pid = create_input();
     printf("web server createing\n");
