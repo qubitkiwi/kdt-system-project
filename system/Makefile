@@ -1,9 +1,14 @@
-CC := gcc
+BUILDROOT_DIR=~/Desktop/buildroot/
+TOOLCHAIN_PATH=${BUILDROOT_DIR}/output/host/bin
+
+# CC := gcc
+CC=${TOOLCHAIN_PATH}/aarch64-buildroot-linux-gnu-gcc
 CFLAGS := -Wall -Wextra
 INCLUDE = -Iinclude
 LDFLAGS = -lrt -lpthread -ldl -lseccomp
 
-CXX := g++
+# CXX := g++
+CXX=${TOOLCHAIN_PATH}/aarch64-buildroot-linux-gnu-g++
 CXXFLAGS := -std=c++14 -Wall -Wextra
 
 SRC_DIR := src
