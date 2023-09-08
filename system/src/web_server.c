@@ -41,23 +41,24 @@ int web_server()
     struct utsname uts;
 
     if (getcwd(path, 1024) == NULL) {
-        fprintf(stderr, "current working directory get error: %s\n", strerror(errno));
+        fprintf(stderr, "web server: current working directory get error: %s\n", strerror(errno));
         exit(-1);
     }
     if (sethostname(host_name, strlen(host_name)) == -1) {
-        perror("sethostname err");
+        perror("web server : sethostname err");
         exit(-1);
     }
     if (uname(&uts) == -1) {
-        perror("uname");
+        perror("web server : uname err");
         exit(-1);
     }
         
         
-    printf(" - [%4d] Current namspace, Parent PID : %d\n", getpid(), getppid() );
-    printf("current working directory: %s\n", path);
-    printf("hostname: %s\n", uts.nodename);
+    printf("%s : - [%4d] Current namspace, Parent PID : %d\n", host_name, getpid(), getppid() );
+    printf("%s : current working directory: %s\n", host_name, path);
+    printf("%s : hostname: %s\n", host_name, uts.nodename);
 
-    execl("/usr/local/bin/filebrowser", "filebrowser", "-a", "0.0.0.0", "-p", "8080", (char *) NULL);
-    return 0;
+    execl("./web_server", "web_server", NULL);
+
+    exit(0);
 }
