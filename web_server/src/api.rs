@@ -14,18 +14,16 @@ pub async fn api333() -> impl Responder {
 
 #[get("/sensor")]
 async fn sensor_data() -> impl Responder {
-    println!("sensor start");
-    let (shm_fd, shm_ptr) = unsafe { shm::init_shm() };
 
+    let (shm_fd, shm_ptr) = unsafe { shm::init_shm() };
     let read_sensor_data: shm::ShmSensor = unsafe { ptr::read(shm_ptr as *const shm::ShmSensor) };
 
-    println!("Read data from shared memory - Temp: {}, Press: {}, Humidity: {}",
+    println!("Read data from shared memory - Temp: {}, Press: {}",
         read_sensor_data.temp,
-        read_sensor_data.press,
-        read_sensor_data.humidity
+        read_sensor_data.press
     );
 
-    shm::clean_shm(shm_fd);
+    // shm::clean_shm(shm_fd);
     HttpResponse::Ok().body("senser")
 }
 

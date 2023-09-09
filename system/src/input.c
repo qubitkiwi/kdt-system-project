@@ -24,8 +24,8 @@ void segfault_handler(int sig_num, siginfo_t * info, void * ucontext) {
 
     /* Get the address at the time the signal was raised */
     // rpi4
-    // caller_address = (void *) uc->uc_mcontext.pc;  // RIP: x86_64 specific     arm_pc: ARM
-    caller_address = (void *) uc->uc_mcontext.rip; // x86-64
+    caller_address = (void *) uc->uc_mcontext.pc;  // RIP: x86_64 specific     arm_pc: ARM
+    // caller_address = (void *) uc->uc_mcontext.rip; // x86-64
 
     fprintf(stderr, "\n");
 
@@ -87,7 +87,7 @@ void *sensor_thread(void* arg) {
         perror("shmget err");
         exit(-1);
     }
-    BMP280_data = shmat(shm_id, (void *)0, 0);
+    BMP280_data = shmat(shm_id, NULL, 0);
     if (BMP280_data == (void *)-1) {
         perror("shmat err");
         exit(-1);
@@ -96,13 +96,15 @@ void *sensor_thread(void* arg) {
     while (1) {
         posix_sleep_ms(5000);
         if (BMP280_data != NULL) {
-            BMP280_data->humidity = rand()%100;
-            BMP280_data->pressure = rand();
             BMP280_data->temperature = rand()%40 - 10;
+            BMP280_data->pressure = rand();
         }
-        msg.msg_type = 1;
+        msg.msg_type = BMP280_SENSOR_DATA;
         msg.param1 = shm_id;
         msg.param2 = 0;
+
+        printf("sensor_thread - BMP280_data : %d, %d\n", BMP280_data->temperature, BMP280_data->pressure);
+
         //MONITOR_QUEUE = system_queue[1]
         if (mq_send(system_queue[1], (char *)&msg, sizeof(msg), 0) == -1) {
             perror("mqretcode err");

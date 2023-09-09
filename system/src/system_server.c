@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <sys/shm.h>
 #include <sys/time.h>
-
+#include <sys/mman.h>
 
 
 #define BUF_SIZE 1024
@@ -68,13 +68,14 @@ pid_t create_system_server() {
 
     const char *name = "system_server"; 
     pid_t system_pid;
+
     system_pid = fork();
     if (system_pid == -1) {
-        perror("system fork");
+        perror("system fork err");
         exit(-1);
     } else if (system_pid == 0) {
         if (prctl(PR_SET_NAME, (unsigned long) name) < 0) {
-            perror("prctl()");
+            perror("system prctl() err");
         }
         system_server();
     }
@@ -144,8 +145,7 @@ void *camera_service_thread(void* arg) {
         if (num_read < 0) continue;
         printf("camera_service_thread: 메시지가 도착했습니다.\n");
         printf("msg.type: %d\n", msg.msg_type);
-        printf("msg.param1: %d\n", msg.param1);
-        printf("msg.param2: %d\n", msg.param2);
+        printf("msg.param1: %d, msg.param2: %d\n", msg.param1, msg.param2);
 
         if (msg.msg_type == CAMERA_TAKE_PICTURE) {
             // toy_camera_take_picture();
@@ -169,8 +169,7 @@ void *watchdog_thread(void* arg[]) {
         if (num_read < 0) continue;
         printf("watchdog_thread: 메시지가 도착했습니다.\n");
         printf("msg.type: %d\n", msg.msg_type);
-        printf("msg.param1: %d\n", msg.param1);
-        printf("msg.param2: %d\n", msg.param2);
+        printf("msg.param1: %d, msg.param2: %d\n", msg.param1, msg.param2);
     }
 }
 
@@ -259,24 +258,45 @@ void *monitor_thread(void* arg) {
     BMP280_data_t *BMP280_data = NULL;
     printf("monitor_thread start %d\n", thread_id);
 
+    int bmp280_fd;
+    BMP280_data_t *bmp280_ptr;
+
+    bmp280_fd = shm_open(SHM_BMP280_ID, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (bmp280_fd == -1) {
+        perror("monitor_thread POSIX shm open err");
+    }
+
+    if (ftruncate(bmp280_fd, sizeof(BMP280_data_t)) == -1) {
+        perror("monitor_thread ftruncate BMP280_data_t err");
+    }
+    
+    bmp280_ptr = (BMP280_data_t*) mmap(NULL, sizeof(BMP280_data_t), PROT_WRITE, MAP_SHARED, bmp280_fd, 0);
+    if (bmp280_ptr == MAP_FAILED) {
+        perror("monitor_thread bmp280_ptr mmap err");
+    }
+
+    int num_read = 0;
+
     while (1) {
-        int num_read = mq_receive(system_queue[thread_id], (void*)&msg, sizeof(toy_msg_t), NULL);
+        printf("monitor thread doing %d\n", num_read);
+        num_read = mq_receive(system_queue[thread_id], (void*)&msg, sizeof(toy_msg_t), NULL);
         if (num_read < 0) continue;
         printf("monitor_thread: 메시지가 도착했습니다.\n");
         printf("msg.type: %d\n", msg.msg_type);
-        printf("msg.param1: %d\n", msg.param1);
-        printf("msg.param2: %d\n", msg.param2);
+        printf("msg.param1: %d, msg.param2: %d\n", msg.param1, msg.param2);
         
         if (msg.msg_type == BMP280_SENSOR_DATA) {
             rev_shm_id = msg.param1;
             BMP280_data = shmat(rev_shm_id, NULL, 0);
             if (BMP280_data == (void *)-1) {
-                perror("shmat err");
+                perror("monitor_thread shmat err");
                 exit(-1);
             }
-            printf("sensor temp: %d\n", BMP280_data->temperature);
-            printf("sensor pressure: %d\n", BMP280_data->pressure);
-            printf("sensor humidity: %d\n", BMP280_data->humidity);
+            printf("monitor_thread : %d, %d\n", BMP280_data->temperature, BMP280_data->pressure);
+
+            bmp280_ptr->temperature = BMP280_data->temperature;
+            bmp280_ptr->pressure = BMP280_data->pressure;
+
             if (shmdt(BMP280_data) < 0) {
                 perror("shmdt error");
                 exit(-1);
@@ -286,6 +306,10 @@ void *monitor_thread(void* arg) {
         } else {
             printf("monitor_thread: unknown message %u", msg.msg_type);
         }
+    }
+
+    if (shm_unlink(SHM_BMP280_ID) == -1) {
+        perror("bmp280 shm unlink err");
     }
 }
 

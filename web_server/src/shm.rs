@@ -6,11 +6,10 @@ use std::{ptr, ffi::CString, mem};
 pub struct ShmSensor {
     pub temp: c_int,
     pub press: c_int,
-    pub humidity: c_int
 }
 
 // const SHM_NAME: CString = CString::new("/my_shared_memory").expect("CString::new failed");
-const SHM_NAME: &str = "/my_shared_memory";
+const SHM_NAME: &str = "/SHM_BMP280";
 
 pub fn init_shm() -> (c_int, *mut c_void) {
     
