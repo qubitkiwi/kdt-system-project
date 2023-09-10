@@ -1,6 +1,6 @@
 obj-m := simple_io.o
 
-export BUILDROOT=~/Desktop/kdt/buildroot
+export BUILDROOT=~/Desktop/buildroot
 export ARCH=arm64
 export CROSS_COMPILE=$(BUILDROOT)/output/host/bin/aarch64-buildroot-linux-gnu-
 
@@ -14,4 +14,4 @@ modules modules_install help clean:
 
 .PHONY: nfs
 nfs:
-	cp simple_io.ko engine.ko ~/Desktop/nfs_rpi
+	cp simple_io.ko ~/Desktop/nfs_rpi
