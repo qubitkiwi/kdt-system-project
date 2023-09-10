@@ -350,31 +350,31 @@ int toy_busy(char **args)
 
 int toy_simple_io(char **args)
 {
-    int dev;
-    char buff = 2;
+    int dev_fd;
+    char buff;
 
-    dev = open(GPIO_DRIVER, O_RDWR | O_NDELAY);
-	if (dev < 0 ) {
+    dev_fd = open(GPIO_DRIVER, O_RDWR | O_NDELAY);
+	if (dev_fd < 0 ) {
         perror("module open error");
         return 1;
     }
 
     if (args[1] != NULL && !strcmp(args[1], "exit")) {
         buff = 2;
-        if (write(dev, &buff, 1) < 0) {
+        if (write(dev_fd, &buff, 1) < 0) {
             perror("write error");
             goto err;
         }
     } else {
         buff = 1;
-        if (write(dev, &buff, 1) < 0) {
+        if (write(dev_fd, &buff, 1) < 0) {
             perror("write error");
             goto err;
         }
     }
 
-    err:
-    close(dev);
+err:
+    close(dev_fd);
 
     return 1;
 }
