@@ -2,13 +2,14 @@
 #include "toy.h"
 #include "sensor.h"
 #include "system_server.h"
+#include "bmp280.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/shm.h>
-
+#include <sys/ioctl.h>
 
 static mqd_t system_queue[SERVER_QUEUE_NUM];
 
@@ -81,6 +82,14 @@ void *sensor_thread(void* arg) {
     toy_msg_t msg;
     int shm_id;
     BMP280_data_t *BMP280_data = NULL;
+    int bmp280_dev_fd;
+
+    bmp280_dev_fd = open(BMP_PATH, O_RDWR);
+    if (bmp280_dev_fd == -1) {
+        perror("BMP280 open err");
+        exit(-1);
+    }
+    ioctl(bmp280_dev_fd, BMP280_INIT, 0);
 
     shm_id = shmget((key_t)SHM_BMP280_KEY, sizeof(BMP280_data_t), 0666 | IPC_CREAT);
     if (shm_id == -1) {
@@ -95,10 +104,9 @@ void *sensor_thread(void* arg) {
 
     while (1) {
         posix_sleep_ms(5000);
-        if (BMP280_data != NULL) {
-            BMP280_data->temperature = rand()%40 - 10;
-            BMP280_data->pressure = rand();
-        }
+
+        ioctl(bmp280_dev_fd, GET_DATA, (struct bmp280_data*) BMP280_data);
+
         msg.msg_type = BMP280_SENSOR_DATA;
         msg.param1 = shm_id;
         msg.param2 = 0;
@@ -110,6 +118,7 @@ void *sensor_thread(void* arg) {
             perror("mqretcode err");
         }
     }
+    close(bmp280_dev_fd);
 }
 
 void input_main() {
