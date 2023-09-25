@@ -1,8 +1,6 @@
 use actix_web::{App, web, HttpServer, HttpResponse, Result};
-mod shm;
 mod api;
 mod static_page;
-// use libc::c_void;
 
 
 async fn not_found() -> Result<HttpResponse> {
@@ -22,7 +20,6 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await;
 
-    
 
     state
 }

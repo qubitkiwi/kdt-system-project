@@ -9,3 +9,5 @@ edition = "2021"
 actix-files = "0.6.2"
 actix-web = "4.3.1"
 libc = "0.2.147"
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.107"

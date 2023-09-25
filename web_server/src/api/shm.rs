@@ -1,19 +1,20 @@
-use libc::{c_int, c_void, O_RDWR, O_CREAT, shm_open, ftruncate, mmap, PROT_READ, MAP_SHARED, close, shm_unlink};
+use libc::{c_void, O_RDWR, O_CREAT, shm_open, ftruncate, mmap, PROT_READ, MAP_SHARED, close, shm_unlink};
 use std::{ptr, ffi::CString, mem};
 
-// 공유 메모리 구조체 정의
-#[repr(C)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ShmSensor {
-    pub temp: c_int,
-    pub press: c_int,
+    pub temp: i32,
+    pub press: u32,
 }
 
 // const SHM_NAME: CString = CString::new("/my_shared_memory").expect("CString::new failed");
 const SHM_NAME: &str = "/SHM_BMP280";
 
-pub fn init_shm() -> (c_int, *mut c_void) {
+pub fn init_shm() -> (i32, *mut c_void) {
     
-    let shm_fd: c_int = unsafe {
+    let shm_fd: i32 = unsafe {
         shm_open(
             CString::new(SHM_NAME).expect("CString::new failed").as_ptr(),
             O_RDWR | O_CREAT,
@@ -48,7 +49,7 @@ pub fn init_shm() -> (c_int, *mut c_void) {
     (shm_fd, shm_ptr)
 }
 
-pub fn clean_shm(shm_fd: c_int) {
+pub fn clean_shm(shm_fd: i32) {
     unsafe {
         close(shm_fd);
         shm_unlink(CString::new(SHM_NAME).expect("CString::new failed").as_ptr());
